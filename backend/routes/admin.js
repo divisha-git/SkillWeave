@@ -8,6 +8,7 @@ import Team from '../models/Team.js';
 import ProblemStatement from '../models/ProblemStatement.js';
 import Company from '../models/Company.js';
 import Message from '../models/Message.js';
+import Settings from '../models/Settings.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -203,62 +204,143 @@ router.post('/alumni/upload', upload.single('file'), async (req, res) => {
     const workbook = xlsx.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(worksheet);
+    
+    // Parse with header row
+    const data = xlsx.utils.sheet_to_json(worksheet, { 
+      defval: '', // Default value for empty cells
+      raw: false // Convert all values to strings
+    });
+
+    // Log first row for debugging
+    if (data.length > 0) {
+      console.log('Sample row keys:', Object.keys(data[0]));
+      console.log('Sample row:', data[0]);
+    }
+
+    if (data.length === 0) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ 
+        message: 'No data found in Excel file. Please check if the file has data rows.',
+        imported: 0,
+        errors: ['File appears to be empty or has no data rows']
+      });
+    }
 
     const alumniRecords = [];
     const errors = [];
 
-    for (const row of data) {
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
       try {
-        const name = row['Name'] || row['name'] || '';
-        const company = row['Company'] || row['company'] || '';
-        const role = row['Role'] || row['role'] || row['Role at Company'] || '';
-        const yearOfPassing = row['Year of passing'] || row['Year of Passing'] || row['yearOfPassing'] || '';
-        const email = row['Email'] || row['email'] || `${name.toLowerCase().replace(/\s+/g, '.')}@alumni.byts.com`;
+        // Try multiple possible column name variations (case-insensitive)
+        const getValue = (keys) => {
+          for (const key of keys) {
+            // Check exact match first
+            if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+              return String(row[key]).trim();
+            }
+            // Check case-insensitive match
+            const lowerKey = key.toLowerCase();
+            for (const rowKey in row) {
+              if (rowKey.toLowerCase() === lowerKey && row[rowKey] !== undefined && row[rowKey] !== null && row[rowKey] !== '') {
+                return String(row[rowKey]).trim();
+              }
+            }
+          }
+          return '';
+        };
+
+        const name = getValue(['Name', 'name', 'NAME', 'Full Name', 'FullName', 'Student Name']);
+        const company = getValue(['Company', 'company', 'COMPANY', 'Company Name', 'CompanyName', 'Organization']);
+        const role = getValue(['Role', 'role', 'ROLE', 'Role at Company', 'RoleAtCompany', 'Position', 'Designation']);
+        const yearOfPassing = getValue(['Year of passing', 'Year of Passing', 'YearOfPassing', 'yearOfPassing', 'Year', 'Passing Year', 'Graduation Year']);
+        let email = getValue(['Email', 'email', 'EMAIL', 'Email Address', 'EmailAddress']);
+        
+        // Generate email if not provided
+        if (!email && name) {
+          email = `${name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '')}@alumni.byts.com`;
+        }
 
         if (!name || !company) {
-          errors.push({ row, error: 'Missing required fields: Name or Company' });
+          errors.push({ 
+            row: i + 2, // +2 because Excel rows start at 1 and we have header
+            error: `Missing required fields: ${!name ? 'Name' : ''} ${!company ? 'Company' : ''}`.trim(),
+            data: row
+          });
           continue;
         }
 
-        // Check for duplicate
+        // Check for duplicate by email
         const existing = await User.findOne({
           email: email.toLowerCase(),
           isBYTSAlumni: true
         });
 
         if (existing) {
-          errors.push({ row, error: 'Alumni already exists' });
+          errors.push({ 
+            row: i + 2, 
+            error: 'Alumni with this email already exists',
+            data: { name, email }
+          });
           continue;
         }
 
         const alumni = new User({
-          name,
-          email: email.toLowerCase(),
-          company,
-          roleAtCompany: role,
-          yearOfPassing: yearOfPassing.toString(),
+          name: name.trim(),
+          email: email.toLowerCase().trim(),
+          company: company.trim(),
+          roleAtCompany: role.trim() || '',
+          yearOfPassing: yearOfPassing.toString().trim() || '',
           role: 'alumni',
           isBYTSAlumni: true
         });
 
         await alumni.save();
-        alumniRecords.push(alumni);
+        alumniRecords.push({
+          _id: alumni._id,
+          name: alumni.name,
+          email: alumni.email,
+          company: alumni.company
+        });
       } catch (error) {
-        errors.push({ row, error: error.message });
+        errors.push({ 
+          row: i + 2, 
+          error: error.message,
+          data: row
+        });
       }
     }
 
     // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch (cleanupError) {
+      console.error('Error cleaning up file:', cleanupError);
+    }
 
     res.json({
-      message: 'Alumni data uploaded successfully',
+      message: alumniRecords.length > 0 
+        ? `Successfully imported ${alumniRecords.length} alumni record(s)` 
+        : 'No alumni records were imported',
       imported: alumniRecords.length,
-      errors: errors.length > 0 ? errors : undefined
+      totalRows: data.length,
+      errors: errors.length > 0 ? errors.slice(0, 10) : undefined, // Limit errors to first 10
+      errorCount: errors.length
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    // Clean up file on error
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.error('Error cleaning up file:', cleanupError);
+      }
+    }
+    console.error('Upload error:', error);
+    res.status(500).json({ 
+      message: error.message || 'Failed to process Excel file',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -269,6 +351,39 @@ router.get('/alumni', async (req, res) => {
       .select('-password')
       .sort({ name: 1 });
     res.json(alumni);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get Team Size Setting
+router.get('/settings/team-size', async (req, res) => {
+  try {
+    const teamSize = await Settings.getSetting('teamSize', 5);
+    res.json({ teamSize: parseInt(teamSize) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Set Team Size Setting
+router.post('/settings/team-size', async (req, res) => {
+  try {
+    const { teamSize } = req.body;
+    
+    if (!teamSize || teamSize < 2 || teamSize > 20) {
+      return res.status(400).json({ message: 'Team size must be between 2 and 20' });
+    }
+
+    await Settings.setSetting('teamSize', parseInt(teamSize));
+    
+    // Update all existing teams' maxSize
+    await Team.updateMany({}, { maxSize: parseInt(teamSize) });
+    
+    res.json({ 
+      message: 'Team size updated successfully',
+      teamSize: parseInt(teamSize)
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -299,12 +414,16 @@ router.get('/dashboard', async (req, res) => {
       })
     );
 
+    // Get team size setting
+    const teamSize = await Settings.getSetting('teamSize', 5);
+
     res.json({
       totalStudents,
       totalAlumni,
       totalTeams,
       totalProblemStatements,
       totalCompanies,
+      teamSize: parseInt(teamSize),
       attendance: {
         totalRecords: totalAttendanceRecords,
         presentRecords,

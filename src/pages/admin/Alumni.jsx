@@ -54,10 +54,32 @@ const Alumni = () => {
           'Content-Type': 'multipart/form-data',
         },
       });
-      toast.success(`Successfully imported ${res.data.imported} alumni records`);
+      
+      if (res.data.imported > 0) {
+        toast.success(`Successfully imported ${res.data.imported} alumni record(s)`);
+      } else {
+        let errorMsg = 'No alumni records were imported. ';
+        if (res.data.errors && res.data.errors.length > 0) {
+          errorMsg += `Errors: ${res.data.errors.map(e => e.error).join(', ')}`;
+        } else if (res.data.totalRows === 0) {
+          errorMsg += 'The Excel file appears to be empty or has no data rows.';
+        } else {
+          errorMsg += 'Please check the Excel file format. Required columns: Name, Company';
+        }
+        toast.error(errorMsg, { duration: 5000 });
+      }
+      
+      if (res.data.errors && res.data.errors.length > 0) {
+        console.error('Import errors:', res.data.errors);
+      }
+      
       setFile(null);
+      // Reset file input
+      const fileInput = document.querySelector('input[type="file"]');
+      if (fileInput) fileInput.value = '';
       fetchAlumni();
     } catch (error) {
+      console.error('Upload error:', error);
       toast.error(error.response?.data?.message || 'Failed to upload file');
     } finally {
       setUploading(false);
@@ -91,9 +113,17 @@ const Alumni = () => {
 
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">Upload Alumni Excel File</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Upload an Excel file (.xlsx or .csv) with columns: Name, Company, Role, Year of passing, Email (optional)
-          </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-gray-700 mb-2">
+              <strong>Required columns:</strong> Name, Company
+            </p>
+            <p className="text-sm text-gray-700 mb-2">
+              <strong>Optional columns:</strong> Role, Year of passing, Email
+            </p>
+            <p className="text-xs text-gray-600">
+              Column names are case-insensitive. First row must be headers. See ALUMNI_EXCEL_TEMPLATE.md for details.
+            </p>
+          </div>
           <form onSubmit={handleUpload} className="flex items-end space-x-4">
             <div className="flex-1">
               <input

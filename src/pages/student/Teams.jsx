@@ -160,7 +160,9 @@ const Teams = () => {
               </div>
 
               <div className="mb-4">
-                <h4 className="font-medium mb-2">Members:</h4>
+                <h4 className="font-medium mb-2">
+                  Members ({team.members?.length || 0} / {team.maxSize || 5}):
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {team.members?.map((member) => (
                     <span key={member._id} className="px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-sm">
@@ -168,24 +170,46 @@ const Teams = () => {
                     </span>
                   ))}
                 </div>
+                {team.members && team.members.length >= (team.maxSize || 5) - 1 && (
+                  <p className="text-xs text-red-600 mt-2">Team is full</p>
+                )}
               </div>
 
               {(team.leader?._id === user?._id || team.leader?._id === user?.id) && (
                 <div className="mb-4">
-                  <h4 className="font-medium mb-2">Invite Students:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {students
-                      .filter(s => !team.members?.some(m => m._id === s._id))
-                      .map((student) => (
-                        <button
-                          key={student._id}
-                          onClick={() => handleInvite(team._id, student._id)}
-                          className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm hover:bg-gray-200"
-                        >
-                          + {student.name}
-                        </button>
-                      ))}
-                  </div>
+                  <h4 className="font-medium mb-2">
+                    Invite Students: 
+                    <span className="text-sm text-gray-500 ml-2">
+                      ({team.members?.length || 0} / {team.maxSize || 5} members)
+                    </span>
+                  </h4>
+                  {team.members && team.members.length + 1 >= (team.maxSize || 5) ? (
+                    <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                      Team is full. Maximum size: {team.maxSize || 5} members (including leader)
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {students
+                        .filter(s => {
+                          // Filter out students already in team
+                          const isMember = team.members?.some(m => m._id === s._id);
+                          // Filter out students already invited
+                          const isInvited = team.pendingInvites?.some(
+                            inv => inv.student?._id === s._id && inv.status === 'pending'
+                          );
+                          return !isMember && !isInvited;
+                        })
+                        .map((student) => (
+                          <button
+                            key={student._id}
+                            onClick={() => handleInvite(team._id, student._id)}
+                            className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm hover:bg-gray-200"
+                          >
+                            + {student.name}
+                          </button>
+                        ))}
+                    </div>
+                  )}
                 </div>
               )}
 

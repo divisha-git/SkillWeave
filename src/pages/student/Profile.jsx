@@ -85,6 +85,61 @@ const Profile = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">My Profile</h2>
 
+        {/* Pending Invitations - Prominent Display */}
+        {profile?.pendingInvitations && profile.pendingInvitations.length > 0 && (
+          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6 mb-6">
+            <h3 className="text-xl font-bold text-yellow-800 mb-4 flex items-center">
+              <span className="mr-2">🔔</span>
+              You have {profile.pendingInvitations.length} pending team invitation(s)!
+            </h3>
+            <div className="space-y-3">
+              {profile.pendingInvitations.map((invitation) => (
+                <div key={invitation.inviteId} className="bg-white rounded-lg p-4 border border-yellow-300">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-gray-900">Team: {invitation.teamName}</p>
+                      <p className="text-sm text-gray-600">Invited by: {invitation.leader?.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Team Size: {invitation.currentSize || 'N/A'} / {invitation.maxSize || 5} members
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api.post(`/student/teams/${invitation.teamId}/invite/${invitation.inviteId}`, { action: 'accept' });
+                            toast.success('Invitation accepted!');
+                            fetchProfile();
+                          } catch (error) {
+                            toast.error(error.response?.data?.message || 'Failed to accept invitation');
+                          }
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api.post(`/student/teams/${invitation.teamId}/invite/${invitation.inviteId}`, { action: 'reject' });
+                            toast.success('Invitation rejected');
+                            fetchProfile();
+                          } catch (error) {
+                            toast.error('Failed to reject invitation');
+                          }
+                        }}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold mb-4">Personal Information</h3>

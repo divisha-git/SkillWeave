@@ -4,6 +4,58 @@ import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 
+const TeamSizeConfig = ({ currentSize, onUpdate }) => {
+  const [teamSize, setTeamSize] = useState(currentSize);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (teamSize < 2) {
+      toast.error('Team size must be at least 2');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post('/admin/settings/team-size', { teamSize });
+      toast.success('Team size updated successfully');
+      onUpdate();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update team size');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex items-end space-x-4">
+      <div className="flex-1">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Maximum Team Size (including leader)
+        </label>
+        <input
+          type="number"
+          min="2"
+          max="20"
+          value={teamSize}
+          onChange={(e) => setTeamSize(parseInt(e.target.value) || 2)}
+          className="w-full px-4 py-2 border rounded-lg"
+          required
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Current setting: {currentSize} members per team (including leader)
+        </p>
+      </div>
+      <button
+        type="submit"
+        disabled={loading || teamSize === currentSize}
+        className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+      >
+        {loading ? 'Updating...' : 'Update'}
+      </button>
+    </form>
+  );
+};
+
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -67,6 +119,12 @@ const Dashboard = () => {
               >
                 Upload Alumni
               </Link>
+              <Link
+                to="/admin/team-settings"
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              >
+                Team Settings
+              </Link>
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
@@ -116,6 +174,11 @@ const Dashboard = () => {
               {stats?.attendance?.presentRecords || 0} / {stats?.attendance?.totalRecords || 0}
             </p>
           </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">Team Size Configuration</h3>
+          <TeamSizeConfig currentSize={stats?.teamSize || 5} onUpdate={fetchDashboard} />
         </div>
 
         {stats?.departmentStats && stats.departmentStats.length > 0 && (

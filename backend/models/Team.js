@@ -34,6 +34,10 @@ const teamSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'disbanded'],
     default: 'active'
+  },
+  maxSize: {
+    type: Number,
+    default: 5 // Default team size
   }
 }, {
   timestamps: true

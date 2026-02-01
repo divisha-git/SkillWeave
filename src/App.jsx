@@ -10,6 +10,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminStudents from './pages/admin/Students';
 import AdminAttendance from './pages/admin/Attendance';
 import AdminAlumni from './pages/admin/Alumni';
+import AdminTeamSettings from './pages/admin/TeamSettings';
 
 // Student pages
 import StudentProfile from './pages/student/Profile';
@@ -103,6 +104,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminAlumni />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/team-settings"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminTeamSettings />
           </ProtectedRoute>
         }
       />

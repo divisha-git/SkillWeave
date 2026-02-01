@@ -5,11 +5,46 @@ import ProblemStatement from '../models/ProblemStatement.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
 import Message from '../models/Message.js';
+import Settings from '../models/Settings.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 router.use(authenticate);
 router.use(authorize('student'));
+
+// Get Pending Invitations
+router.get('/invitations', async (req, res) => {
+  try {
+    const invitations = await Team.find({
+      'pendingInvites.student': req.user._id,
+      'pendingInvites.status': 'pending',
+      status: 'active'
+    })
+      .populate('leader', 'name email')
+      .populate('pendingInvites.student', 'name email')
+      .select('name leader pendingInvites maxSize');
+
+    // Filter to only get invites for this student
+    const myInvitations = invitations.map(team => {
+      const myInvite = team.pendingInvites.find(
+        inv => inv.student._id.toString() === req.user._id.toString() && inv.status === 'pending'
+      );
+      return {
+        teamId: team._id,
+        teamName: team.name,
+        leader: team.leader,
+        inviteId: myInvite._id,
+        invitedAt: myInvite.invitedAt,
+        maxSize: team.maxSize,
+        currentSize: team.members.length + 1
+      };
+    }).filter(inv => inv.inviteId); // Remove any null entries
+
+    res.json(myInvitations);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Get Student Profile
 router.get('/profile', async (req, res) => {
@@ -49,6 +84,30 @@ router.get('/profile', async (req, res) => {
       company: { $in: companyNames }
     }).select('name company roleAtCompany email');
 
+    // Get pending invitations
+    const invitations = await Team.find({
+      'pendingInvites.student': req.user._id,
+      'pendingInvites.status': 'pending',
+      status: 'active'
+    })
+      .populate('leader', 'name email')
+      .select('name leader pendingInvites maxSize members');
+
+    const myInvitations = invitations.map(team => {
+      const myInvite = team.pendingInvites.find(
+        inv => inv.student.toString() === req.user._id.toString() && inv.status === 'pending'
+      );
+      return myInvite ? {
+        teamId: team._id,
+        teamName: team.name,
+        leader: team.leader,
+        inviteId: myInvite._id,
+        invitedAt: myInvite.invitedAt,
+        maxSize: team.maxSize || 5,
+        currentSize: (team.members ? team.members.length : 0) + 1 // +1 for leader
+      } : null;
+    }).filter(inv => inv !== null);
+
     res.json({
       student,
       attendance: {
@@ -60,7 +119,8 @@ router.get('/profile', async (req, res) => {
       teams,
       problemStatements,
       companies,
-      relevantAlumni
+      relevantAlumni,
+      pendingInvitations: myInvitations
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -97,10 +157,14 @@ router.post('/teams', async (req, res) => {
       return res.status(400).json({ message: 'You are already part of a team' });
     }
 
+    // Get team size from settings
+    const maxTeamSize = await Settings.getSetting('teamSize', 5);
+
     const team = new Team({
       name,
       leader: req.user._id,
-      members: [req.user._id]
+      members: [req.user._id],
+      maxSize: parseInt(maxTeamSize)
     });
 
     await team.save();
@@ -129,6 +193,20 @@ router.post('/teams/:teamId/invite', async (req, res) => {
 
     if (team.leader.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Only team leader can invite members' });
+    }
+
+    // Check team size limit (including pending invites)
+    const currentMembers = team.members.length + 1; // +1 for leader
+    const pendingInvitesCount = team.pendingInvites.filter(
+      inv => inv.status === 'pending'
+    ).length;
+    const totalSize = currentMembers + pendingInvitesCount;
+    const maxSize = team.maxSize || 5;
+    
+    if (totalSize >= maxSize) {
+      return res.status(400).json({ 
+        message: `Cannot send invite. Team will exceed maximum size of ${maxSize} members (including leader). Current: ${currentMembers} members + ${pendingInvitesCount} pending invites.` 
+      });
     }
 
     // Check if student is already in a team
@@ -191,6 +269,16 @@ router.post('/teams/:teamId/invite/:inviteId', async (req, res) => {
     }
 
     if (action === 'accept') {
+      // Check team size before accepting
+      const currentSize = team.members.length + 1; // +1 for leader
+      const maxSize = team.maxSize || 5;
+      
+      if (currentSize >= maxSize) {
+        return res.status(400).json({ 
+          message: `Cannot accept invitation. Team is full (${maxSize} members maximum).` 
+        });
+      }
+
       invite.status = 'accepted';
       if (!team.members.includes(invite.student)) {
         team.members.push(invite.student);
