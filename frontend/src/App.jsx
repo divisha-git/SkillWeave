@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ResetPassword from './pages/ResetPassword';
+import OAuthCallback from './pages/OAuthCallback';
 
 // Admin pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -12,12 +14,14 @@ import AdminAttendance from './pages/admin/Attendance';
 import AdminAlumni from './pages/admin/Alumni';
 import AdminTeamSettings from './pages/admin/TeamSettings';
 import AdminResources from './pages/admin/Resources';
+import AdminInterviewFeedback from './pages/admin/InterviewFeedback';
 
 // Student pages
 import StudentProfile from './pages/student/Profile';
 import StudentAlumni from './pages/student/Alumni';
 import StudentAttendance from './pages/student/Attendance';
 import StudentResources from './pages/student/Resources';
+import StudentFeedback from './pages/student/Feedback';
 
 // Alumni pages
 import AlumniProfile from './pages/alumni/Profile';
@@ -76,6 +80,8 @@ function AppRoutes() {
           )
         } 
       />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route path="/oauth/callback" element={<OAuthCallback />} />
       
       {/* Admin Routes */}
       <Route
@@ -126,6 +132,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/interview-feedback"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminInterviewFeedback />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Student Routes */}
       <Route
@@ -160,6 +174,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/student/feedback"
+        element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StudentFeedback />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Alumni Routes */}
       <Route
@@ -183,7 +205,26 @@ function App() {
     <AuthProvider>
       <Router>
         <AppRoutes />
-        <Toaster position="top-right" />
+        <Toaster 
+          position="top-right" 
+          toastOptions={{
+            duration: 4000,
+            success: {
+              duration: 3000,
+              style: {
+                background: '#10B981',
+                color: '#fff',
+              },
+            },
+            error: {
+              duration: 5000,
+              style: {
+                background: '#EF4444',
+                color: '#fff',
+              },
+            },
+          }}
+        />
       </Router>
     </AuthProvider>
   );

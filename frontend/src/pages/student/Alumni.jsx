@@ -155,6 +155,7 @@ const Alumni = () => {
     { name: 'Attendance', path: '/student/attendance', icon: 'calendar' },
     { name: 'Resources', path: '/student/resources', icon: 'book' },
     { name: 'Alumni Network', path: '/student/alumni', icon: 'users', current: true },
+    { name: 'Interview Feedback', path: '/student/feedback', icon: 'feedback' },
   ];
 
   const getIcon = (iconName) => {
@@ -181,6 +182,12 @@ const Alumni = () => {
         return (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        );
+      case 'feedback':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         );
       default:
@@ -221,7 +228,7 @@ const Alumni = () => {
               />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-[#1a365d]">BYTSKEC</h1>
+              <h1 className="text-lg font-bold text-[#1a365d]">BYTS KEC</h1>
               <p className="text-xs text-gray-500 -mt-0.5">Student Portal</p>
             </div>
           </div>
@@ -293,7 +300,7 @@ const Alumni = () => {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <span className="text-white font-bold text-lg">BYTSKEC</span>
+                  <span className="text-white font-bold text-lg">BYTS KEC</span>
                 </div>
               </div>
 

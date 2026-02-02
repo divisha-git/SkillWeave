@@ -96,6 +96,18 @@ const userSchema = new mongoose.Schema({
   isBYTSAlumni: {
     type: Boolean,
     default: false
+  },
+  // Google OAuth
+  googleId: {
+    type: String,
+    sparse: true
+  },
+  // Password Reset
+  resetPasswordToken: {
+    type: String
+  },
+  resetPasswordExpires: {
+    type: Date
   }
 }, {
   timestamps: true

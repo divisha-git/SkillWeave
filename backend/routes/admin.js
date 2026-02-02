@@ -12,6 +12,8 @@ import Message from '../models/Message.js';
 import Settings from '../models/Settings.js';
 import Event from '../models/Event.js';
 import Resource from '../models/Resource.js';
+import FeedbackTask from '../models/FeedbackTask.js';
+import StudentFeedback from '../models/StudentFeedback.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -234,7 +236,7 @@ router.post('/alumni/upload', upload.single('file'), async (req, res) => {
 
     if (data.length === 0) {
       fs.unlinkSync(req.file.path);
-      return res.status(400).j~son({ 
+      return res.status(400).json({ 
         message: 'No data found in Excel file. Please check if the file has data rows.',
         imported: 0,
         errors: ['File appears to be empty or has no data rows']
@@ -755,6 +757,193 @@ router.delete('/resources/:id', async (req, res) => {
     }
 
     res.json({ message: 'Resource deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== FEEDBACK TASK ROUTES ====================
+
+// Get all feedback tasks
+router.get('/feedback-tasks', async (req, res) => {
+  try {
+    const tasks = await FeedbackTask.find()
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 });
+    res.json(tasks);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Create feedback task
+router.post('/feedback-tasks', async (req, res) => {
+  try {
+    const { companyName, description, departments, driveDate, deadline } = req.body;
+
+    if (!companyName || !departments || departments.length === 0) {
+      return res.status(400).json({ message: 'Company name and at least one department are required' });
+    }
+
+    const task = new FeedbackTask({
+      companyName,
+      description,
+      departments,
+      driveDate,
+      deadline,
+      createdBy: req.user._id
+    });
+
+    await task.save();
+    res.status(201).json(task);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update feedback task
+router.put('/feedback-tasks/:id', async (req, res) => {
+  try {
+    const { companyName, description, departments, driveDate, deadline, isActive } = req.body;
+
+    const task = await FeedbackTask.findByIdAndUpdate(
+      req.params.id,
+      { companyName, description, departments, driveDate, deadline, isActive },
+      { new: true }
+    );
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete feedback task
+router.delete('/feedback-tasks/:id', async (req, res) => {
+  try {
+    const task = await FeedbackTask.findByIdAndDelete(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Also delete all related student feedback
+    await StudentFeedback.deleteMany({ task: req.params.id });
+
+    res.json({ message: 'Task and related feedback deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get all feedback submissions for a task
+router.get('/feedback-tasks/:id/submissions', async (req, res) => {
+  try {
+    const submissions = await StudentFeedback.find({ task: req.params.id, isSubmitted: true })
+      .populate('student', 'name email department studentId')
+      .populate('task', 'companyName')
+      .sort({ updatedAt: -1 });
+
+    res.json(submissions);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get all feedback submissions grouped by department
+router.get('/feedback-submissions', async (req, res) => {
+  try {
+    const { taskId, department } = req.query;
+    
+    let query = { isSubmitted: true };
+    if (taskId) query.task = taskId;
+
+    let submissions = await StudentFeedback.find(query)
+      .populate('student', 'name email department studentId year')
+      .populate('task', 'companyName driveDate')
+      .sort({ updatedAt: -1 });
+
+    // Filter by department if specified
+    if (department) {
+      submissions = submissions.filter(s => s.student?.department === department);
+    }
+
+    // Group by department
+    const grouped = submissions.reduce((acc, sub) => {
+      const dept = sub.student?.department || 'Unknown';
+      if (!acc[dept]) acc[dept] = [];
+      acc[dept].push(sub);
+      return acc;
+    }, {});
+
+    res.json({ submissions, grouped });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Export feedback to Excel
+router.get('/feedback-export/:taskId', async (req, res) => {
+  try {
+    const { department } = req.query;
+    
+    let submissions = await StudentFeedback.find({ task: req.params.taskId, isSubmitted: true })
+      .populate('student', 'name email department studentId year')
+      .populate('task', 'companyName driveDate')
+      .sort({ 'student.department': 1, updatedAt: -1 });
+
+    if (department) {
+      submissions = submissions.filter(s => s.student?.department === department);
+    }
+
+    const task = await FeedbackTask.findById(req.params.taskId);
+
+    // Prepare Excel data
+    const excelData = [];
+    
+    submissions.forEach(sub => {
+      const baseRow = {
+        'Student Name': sub.student?.name || 'N/A',
+        'Student ID': sub.student?.studentId || 'N/A',
+        'Email': sub.student?.email || 'N/A',
+        'Department': sub.student?.department || 'N/A',
+        'Year': sub.student?.year || 'N/A',
+        'Company': task?.companyName || 'N/A',
+        'Overall Experience': sub.overallExperience || 'N/A',
+        'Additional Comments': sub.additionalComments || 'N/A',
+        'Submitted At': sub.updatedAt ? new Date(sub.updatedAt).toLocaleString() : 'N/A'
+      };
+
+      // Add rounds data
+      if (sub.rounds && sub.rounds.length > 0) {
+        sub.rounds.forEach((round, idx) => {
+          baseRow[`Round ${idx + 1} Name`] = round.roundName || '';
+          if (round.fields && round.fields.length > 0) {
+            round.fields.forEach(field => {
+              baseRow[`R${idx + 1}: ${field.fieldName}`] = field.fieldValue || '';
+            });
+          }
+        });
+      }
+
+      excelData.push(baseRow);
+    });
+
+    // Create workbook
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.json_to_sheet(excelData);
+    xlsx.utils.book_append_sheet(wb, ws, 'Feedback');
+
+    // Write to buffer
+    const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${task?.companyName || 'feedback'}_feedback.xlsx"`);
+    res.send(buffer);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

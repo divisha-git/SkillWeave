@@ -39,6 +39,7 @@ const AdminLayout = ({ children, title }) => {
     { name: 'Attendance', path: '/admin/attendance', icon: 'calendar' },
     { name: 'Resources', path: '/admin/resources', icon: 'book' },
     { name: 'Alumni', path: '/admin/alumni', icon: 'graduation' },
+    { name: 'Interview Feedback', path: '/admin/interview-feedback', icon: 'feedback' },
     { name: 'Settings', path: '/admin/team-settings', icon: 'settings' },
   ];
 
@@ -74,6 +75,12 @@ const AdminLayout = ({ children, title }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+          </svg>
+        );
+      case 'feedback':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         );
       case 'settings':
@@ -114,7 +121,7 @@ const AdminLayout = ({ children, title }) => {
               />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-[#1a365d]">BYTSKEC</h1>
+              <h1 className="text-lg font-bold text-[#1a365d]">BYTS KEC</h1>
               <p className="text-xs text-gray-500 -mt-0.5">Admin Portal</p>
             </div>
           </div>
@@ -126,20 +133,6 @@ const AdminLayout = ({ children, title }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-        </div>
-
-        {/* Admin Info Section in Sidebar */}
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-[#1a365d] flex items-center justify-center text-white font-bold">
-              {getInitial(user?.name)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-900 truncate">{formatName(user?.name)}</p>
-              <p className="text-xs text-gray-500">Administrator</p>
-              <p className="text-xs text-gray-400 truncate">{user?.email}</p>
-            </div>
-          </div>
         </div>
 
         <nav className="p-4 space-y-1">
@@ -161,19 +154,6 @@ const AdminLayout = ({ children, title }) => {
             </Link>
           ))}
         </nav>
-
-        {/* Logout Button at Bottom */}
-        <div className="absolute bottom-4 left-4 right-4">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span className="font-medium">Logout</span>
-          </button>
-        </div>
       </aside>
 
       {/* Main Content */}
@@ -200,7 +180,7 @@ const AdminLayout = ({ children, title }) => {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <span className="text-white font-bold text-lg">BYTSKEC Admin</span>
+                  <span className="text-white font-bold text-lg">BYTS KEC</span>
                 </div>
               </div>
 

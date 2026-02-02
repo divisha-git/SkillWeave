@@ -206,7 +206,7 @@ const Profile = () => {
                 />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">BYTSKEC</h1>
+                <h1 className="text-2xl font-bold text-white">BYTS KEC</h1>
                 <p className="text-xs text-white/80 -mt-1">Alumni Portal</p>
               </div>
             </div>

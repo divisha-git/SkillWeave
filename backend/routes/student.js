@@ -11,6 +11,8 @@ import Message from '../models/Message.js';
 import Settings from '../models/Settings.js';
 import Event from '../models/Event.js';
 import Resource from '../models/Resource.js';
+import FeedbackTask from '../models/FeedbackTask.js';
+import StudentFeedback from '../models/StudentFeedback.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1311,6 +1313,136 @@ router.get('/resources/:id/download', async (req, res) => {
     // Set proper headers for download
     res.setHeader('Content-Disposition', `attachment; filename="${resource.fileName}"`);
     res.sendFile(filePath);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== FEEDBACK ROUTES ====================
+
+// Get feedback tasks for student's department
+router.get('/feedback-tasks', async (req, res) => {
+  try {
+    const student = await User.findById(req.user._id);
+    const studentDept = student?.department;
+
+    if (!studentDept) {
+      return res.status(400).json({ message: 'Student department not found' });
+    }
+
+    // Get active tasks for student's department
+    const tasks = await FeedbackTask.find({
+      isActive: true,
+      departments: studentDept,
+      $or: [
+        { deadline: { $gte: new Date() } },
+        { deadline: null }
+      ]
+    }).sort({ createdAt: -1 });
+
+    // Get student's feedback for these tasks
+    const taskIds = tasks.map(t => t._id);
+    const feedbacks = await StudentFeedback.find({
+      task: { $in: taskIds },
+      student: req.user._id
+    });
+
+    // Map feedback status to tasks
+    const tasksWithStatus = tasks.map(task => {
+      const feedback = feedbacks.find(f => f.task.toString() === task._id.toString());
+      return {
+        ...task.toObject(),
+        feedbackStatus: feedback ? (feedback.isSubmitted ? 'submitted' : 'draft') : 'pending',
+        feedbackId: feedback?._id
+      };
+    });
+
+    res.json(tasksWithStatus);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get or create feedback for a task
+router.get('/feedback/:taskId', async (req, res) => {
+  try {
+    let feedback = await StudentFeedback.findOne({
+      task: req.params.taskId,
+      student: req.user._id
+    }).populate('task', 'companyName description driveDate');
+
+    if (!feedback) {
+      // Create empty feedback
+      feedback = new StudentFeedback({
+        task: req.params.taskId,
+        student: req.user._id,
+        rounds: [],
+        overallExperience: 'Good',
+        additionalComments: ''
+      });
+      await feedback.save();
+      feedback = await StudentFeedback.findById(feedback._id).populate('task', 'companyName description driveDate');
+    }
+
+    res.json(feedback);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Save/update feedback (draft or submit)
+router.put('/feedback/:taskId', async (req, res) => {
+  try {
+    const { rounds, overallExperience, additionalComments, isSubmitted } = req.body;
+
+    let feedback = await StudentFeedback.findOne({
+      task: req.params.taskId,
+      student: req.user._id
+    });
+
+    if (!feedback) {
+      feedback = new StudentFeedback({
+        task: req.params.taskId,
+        student: req.user._id
+      });
+    }
+
+    // Check if already submitted
+    if (feedback.isSubmitted && isSubmitted) {
+      return res.status(400).json({ message: 'Feedback already submitted and cannot be modified' });
+    }
+
+    feedback.rounds = rounds || [];
+    feedback.overallExperience = overallExperience || 'Good';
+    feedback.additionalComments = additionalComments || '';
+    feedback.isSubmitted = isSubmitted || false;
+
+    await feedback.save();
+
+    res.json({ message: isSubmitted ? 'Feedback submitted successfully' : 'Feedback saved as draft', feedback });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete feedback (only if not submitted)
+router.delete('/feedback/:feedbackId', async (req, res) => {
+  try {
+    const feedback = await StudentFeedback.findOne({
+      _id: req.params.feedbackId,
+      student: req.user._id
+    });
+
+    if (!feedback) {
+      return res.status(404).json({ message: 'Feedback not found' });
+    }
+
+    if (feedback.isSubmitted) {
+      return res.status(400).json({ message: 'Cannot delete submitted feedback' });
+    }
+
+    await StudentFeedback.findByIdAndDelete(req.params.feedbackId);
+    res.json({ message: 'Feedback deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
