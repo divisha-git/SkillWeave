@@ -8,6 +8,9 @@ const Alumni = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({ name: '', email: '', company: '', roleAtCompany: '', yearOfPassing: '' });
+  const [downloadCreds, setDownloadCreds] = useState(null);
 
   useEffect(() => {
     fetchAlumni();
@@ -22,6 +25,59 @@ const Alumni = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const startEdit = (a) => {
+    setEditingId(a._id);
+    setEditData({
+      name: a.name || '',
+      email: a.email || '',
+      company: a.company || '',
+      roleAtCompany: a.roleAtCompany || '',
+      yearOfPassing: a.yearOfPassing || ''
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditData({ name: '', email: '', company: '', roleAtCompany: '', yearOfPassing: '' });
+  };
+
+  const saveEdit = async (id) => {
+    try {
+      await api.put(`/admin/alumni/${id}`, editData);
+      toast.success('Alumni updated');
+      cancelEdit();
+      fetchAlumni();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to update alumni');
+    }
+  };
+
+  const deleteAlumni = async (id) => {
+    if (!window.confirm('Delete this alumni?')) return;
+    try {
+      await api.delete(`/admin/alumni/${id}`);
+      toast.success('Alumni deleted');
+      fetchAlumni();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to delete alumni');
+    }
+  };
+
+  const downloadCSV = () => {
+    if (!downloadCreds) return;
+    const header = ['Name','Email','StudentId','Password','Type'];
+    const rows = downloadCreds.map(c => [c.name, c.email, c.studentId || '', c.password, c.type || 'alumni']);
+    const csv = [header.join(','), ...rows.map(r => r.map(v => `"${(v ?? '').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'alumni_credentials.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    setDownloadCreds(null);
   };
 
   const handleFileChange = (e) => {
@@ -47,7 +103,7 @@ const Alumni = () => {
       });
       
       if (res.data.imported > 0) {
-        toast.success(`Successfully imported ${res.data.imported} alumni record(s)`);
+        toast.success(`Processed ${res.data.imported} alumni record(s)`);
       } else {
         let errorMsg = 'No alumni records were imported. ';
         if (res.data.errors && res.data.errors.length > 0) {
@@ -65,6 +121,11 @@ const Alumni = () => {
       }
       
       setFile(null);
+      if (res.data.credentials && res.data.credentials.length) {
+        setDownloadCreds(res.data.credentials);
+      } else {
+        setDownloadCreds(null);
+      }
       // Reset file input
       const fileInput = document.querySelector('input[type="file"]');
       if (fileInput) fileInput.value = '';
@@ -128,6 +189,12 @@ const Alumni = () => {
             {uploading ? 'Uploading...' : 'Upload'}
           </button>
         </form>
+        {downloadCreds && (
+          <div className="mt-4 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <span>Credentials generated for new/updated alumni. Download once and share securely.</span>
+            <button onClick={downloadCSV} className="px-3 py-1.5 rounded-md bg-amber-600 text-white hover:bg-amber-700">Download CSV</button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -143,6 +210,7 @@ const Alumni = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year of Passing</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -158,24 +226,61 @@ const Alumni = () => {
                   </td>
                 </tr>
               ) : (
-                alumni.map((alum) => (
-                  <tr key={alum._id} className="hover:bg-gray-50">
+                alumni.map((a) => (
+                  <tr key={a._id} className="hover:bg-gray-50">
+                    {/* Name */}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-sm font-medium">
-                          {alum.name?.charAt(0).toUpperCase()}
+                      {editingId === a._id ? (
+                        <input className="w-full border rounded-md px-2 py-1 text-sm" value={editData.name} onChange={(e)=>setEditData({...editData,name:e.target.value})} />
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-sm font-medium">
+                            {a.name?.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-medium text-gray-900">{a.name}</span>
                         </div>
-                        <span className="font-medium text-gray-900">{alum.name}</span>
-                      </div>
+                      )}
                     </td>
+                    {/* Company */}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-800 rounded-full">
-                        {alum.company}
-                      </span>
+                      {editingId === a._id ? (
+                        <input className="w-full border rounded-md px-2 py-1 text-sm" value={editData.company} onChange={(e)=>setEditData({...editData,company:e.target.value})} />
+                      ) : (
+                        <span className="px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-800 rounded-full">{a.company}</span>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alum.roleAtCompany || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alum.yearOfPassing || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alum.email || '-'}</td>
+                    {/* Role */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {editingId === a._id ? (
+                        <input className="w-full border rounded-md px-2 py-1 text-sm" value={editData.roleAtCompany} onChange={(e)=>setEditData({...editData,roleAtCompany:e.target.value})} />
+                      ) : (a.roleAtCompany || '-')}
+                    </td>
+                    {/* Year */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {editingId === a._id ? (
+                        <input className="w-full border rounded-md px-2 py-1 text-sm" value={editData.yearOfPassing} onChange={(e)=>setEditData({...editData,yearOfPassing:e.target.value})} />
+                      ) : (a.yearOfPassing || '-')}
+                    </td>
+                    {/* Email */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {editingId === a._id ? (
+                        <input className="w-full border rounded-md px-2 py-1 text-sm" value={editData.email} onChange={(e)=>setEditData({...editData,email:e.target.value})} />
+                      ) : (a.email || '-')}
+                    </td>
+                    {/* Actions */}
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      {editingId === a._id ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={()=>saveEdit(a._id)} className="px-3 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">Save</button>
+                          <button onClick={cancelEdit} className="px-3 py-1 rounded-md border">Cancel</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={()=>startEdit(a)} className="px-3 py-1 rounded-md border hover:bg-gray-50">Edit</button>
+                          <button onClick={()=>deleteAlumni(a._id)} className="px-3 py-1 rounded-md bg-red-50 text-red-600 hover:bg-red-100">Delete</button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))
               )}

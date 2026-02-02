@@ -152,9 +152,24 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    // Support logging in with either email (all roles) or studentId (students)
+    const identifierRaw = String(email || '').trim();
+    const identifier = identifierRaw.toLowerCase();
+
+    let user = null;
+    if (identifier.includes('@')) {
+      user = await User.findOne({ email: identifier });
+    } else {
+      // Try as email (in case) or studentId for students
+      user = await User.findOne({
+        $or: [
+          { email: identifier },
+          { studentId: identifierRaw } // keep original case for roll numbers
+        ]
+      });
+    }
     if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     // All users must have a password to login
@@ -164,7 +179,7 @@ router.post('/login', async (req, res) => {
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const token = jwt.sign(

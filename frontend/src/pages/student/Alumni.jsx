@@ -121,6 +121,11 @@ const Alumni = () => {
         content: chatMessage
       });
       setConversation(prev => [...prev, res.data]);
+      // Ensure student's own sent message doesn't appear as a new notification for themselves
+      setAlumniMessages((prev) => ({
+        ...prev,
+        [selectedAlumni._id]: 0
+      }));
       setChatMessage('');
       // Scroll to bottom
       setTimeout(() => {
@@ -387,34 +392,28 @@ const Alumni = () => {
             </form>
           </div>
 
-          {/* Alumni Grid - Small Circles that Expand */}
-          <div className="flex flex-wrap gap-4 justify-center">
+          {/* Alumni Grid - Name-only square cards with expandable details */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredAlumni.length > 0 ? (
               filteredAlumni.map((alum) => (
                 <div key={alum._id} className="relative">
-                  {/* Small Circle Avatar - Click to Expand */}
-                  <button
-                    onClick={() => setExpandedAlumni(expandedAlumni === alum._id ? null : alum._id)}
-                    className={`w-16 h-16 rounded-full bg-[#1a365d] flex items-center justify-center text-white text-xl font-bold border-3 border-white shadow-lg hover:scale-110 transition-all duration-300 overflow-hidden ${expandedAlumni === alum._id ? 'ring-4 ring-[#91C04A] scale-110' : ''}`}
-                  >
-                    {alum.profilePic ? (
-                      <img src={alum.profilePic} alt={alum.name} className="w-full h-full object-cover" />
-                    ) : (
-                      getInitial(alum.name)
-                    )}
-                  </button>
-                  
-                  {/* Message Badge */}
+                  {/* unread badge */}
                   {alumniMessages[alum._id] > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-2 -right-2 z-10 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
                       {alumniMessages[alum._id]}
                     </span>
                   )}
+                  {/* square card with name */}
+                  <button
+                    onClick={() => setExpandedAlumni(expandedAlumni === alum._id ? null : alum._id)}
+                    className={`w-full h-24 sm:h-28 bg-white border border-gray-200 rounded-xl shadow-sm flex items-center justify-center p-3 text-center hover:shadow-md transition ${expandedAlumni === alum._id ? 'ring-2 ring-[#91C04A]' : ''}`}
+                  >
+                    <span className="font-semibold text-gray-800 line-clamp-2">{formatName(alum.name)}</span>
+                  </button>
 
-                  {/* Expanded Card */}
+                  {/* expanded popover with details */}
                   {expandedAlumni === alum._id && (
-                    <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-20 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-fadeIn">
-                      {/* Card Header */}
+                    <div className="absolute z-20 left-1/2 -translate-x-1/2 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-fadeIn">
                       <div className="bg-[#1a365d] px-5 py-4 text-center relative">
                         <button
                           onClick={(e) => {
@@ -430,8 +429,6 @@ const Alumni = () => {
                         <h3 className="text-lg font-bold text-white">{formatName(alum.name)}</h3>
                         <p className="text-white/80 text-sm">{alum.roleAtCompany || alum.domain || 'Alumni'}</p>
                       </div>
-
-                      {/* Card Body */}
                       <div className="p-4 space-y-2">
                         <div className="flex items-center gap-2">
                           <svg className="w-4 h-4 text-[#91C04A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,7 +438,7 @@ const Alumni = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <svg className="w-4 h-4 text-[#1a365d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2z" />
                           </svg>
                           <span className="text-sm text-gray-600">{alum.experience || 'N/A'} exp</span>
                         </div>
@@ -451,9 +448,15 @@ const Alumni = () => {
                           </svg>
                           <span className="text-sm text-gray-600">Batch of {alum.yearOfPassing || 'N/A'}</span>
                         </div>
+                        {alum.email && (
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12H8m8 0l-8 6m8-6l-8-6" />
+                            </svg>
+                            <span className="text-sm text-gray-600 truncate">{alum.email}</span>
+                          </div>
+                        )}
                       </div>
-
-                      {/* Card Footer */}
                       <div className="px-4 pb-4">
                         <button
                           onClick={(e) => {
@@ -473,7 +476,7 @@ const Alumni = () => {
                 </div>
               ))
             ) : (
-              <div className="text-center py-16 w-full">
+              <div className="col-span-full text-center py-16">
                 <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
                   <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -487,11 +490,12 @@ const Alumni = () => {
 
           {/* Click outside to close expanded card */}
           {expandedAlumni && (
-            <div 
-              className="fixed inset-0 z-10" 
+            <div
+              className="fixed inset-0 z-10"
               onClick={() => setExpandedAlumni(null)}
             ></div>
           )}
+          {/* End of Alumni Grid */}
         </main>
       </div>
 

@@ -334,6 +334,7 @@ const StudentEvents = () => {
                 </div>
             )}
         </main>
+
       </div>
     </div>
   );
