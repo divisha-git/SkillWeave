@@ -426,70 +426,6 @@ const Profile = () => {
             </div>
           </div>
 
-          {upcomingEvents.length > 0 && (
-            <div className="mb-8 animate-fadeIn">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-2xl">🔔</span>
-                <h2 className="text-xl font-bold text-[#1a365d]">New Events & Hackathons</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {upcomingEvents.map((event) => (
-                  <div key={event._id} className="group bg-white rounded-xl shadow-sm border border-blue-100 p-5 relative overflow-hidden hovering-scale transition-all duration-300 hover:shadow-lg hover:border-blue-200">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-blue-50 to-transparent rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
-                    
-                    <div className="relative">
-                      <div className="flex justify-between items-start mb-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          event.eventType === 'hackathon' 
-                            ? 'bg-purple-100 text-purple-700' 
-                            : 'bg-green-100 text-green-700'
-                        }`}>
-                          {event.eventType === 'hackathon' ? 'Hackathon' : 'Event'}
-                        </span>
-                        {event.status === 'upcoming' && (
-                          <span className="bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded font-medium">
-                            Upcoming
-                          </span>
-                        )}
-                      </div>
-
-                      <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1 group-hover:text-[#1a365d] transition-colors">
-                        {event.name}
-                      </h3>
-                      
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[40px]">
-                        {event.description}
-                      </p>
-                      
-                      <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                         <div className="flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {new Date(event.startDate).toLocaleDateString()}
-                         </div>
-                         <div className="flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <span className="truncate max-w-[100px]">{event.venue || 'TBD'}</span>
-                         </div>
-                      </div>
-
-                      <button 
-                         onClick={() => navigate(`/student/events/${event._id}`)}
-                         className="w-full py-2 bg-gray-50 text-[#1a365d] font-semibold rounded-lg group-hover:bg-[#1a365d] group-hover:text-white transition-all duration-200 text-sm"
-                      >
-                         View Details
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Main Grid - 3 columns */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Attendance Card */}
@@ -554,33 +490,20 @@ const Profile = () => {
                   <p className="text-xs text-gray-500">Hackathons & Competitions</p>
                 </div>
               </div>
-              <div className="p-5">
-                {hackathons.length > 0 ? (
-                  <div className="space-y-3">
-                    {hackathons.slice(0, 3).map((hackathon) => (
-                      <div key={hackathon._id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-                        {hackathon.isNew && (
-                          <span className="px-2 py-0.5 bg-[#1a365d] text-white text-xs font-medium rounded-full shrink-0">NEW</span>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 text-sm truncate">{hackathon.name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {new Date(hackathon.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(hackathon.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <p className="text-gray-500 text-sm">No upcoming events</p>
-                  </div>
-                )}
+              <div className="p-8 text-center flex flex-col items-center justify-center h-[280px]">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-[#1a365d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-bold text-gray-900 mb-2">Explore Events</h4>
+                <p className="text-gray-500 mb-6 text-sm">Check out the latest hackathons and events happening on campus.</p>
+                <Link 
+                  to="/student/events" 
+                  className="px-6 py-2 bg-[#1a365d] text-white rounded-xl hover:bg-[#2d3748] transition-colors font-medium shadow-sm hover:shadow-md"
+                >
+                  View All Events
+                </Link>
               </div>
             </div>
 
