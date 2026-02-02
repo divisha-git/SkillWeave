@@ -40,7 +40,7 @@ const AdminLayout = ({ children, title }) => {
     { name: 'Events', path: '/admin/events', icon: 'flag' },
     { name: 'Resources', path: '/admin/resources', icon: 'book' },
     { name: 'Alumni', path: '/admin/alumni', icon: 'graduation' },
-    { name: 'Interview Feedback', path: '/admin/interview-feedback', icon: 'feedback' },
+    { name: 'Interview Experience', path: '/admin/interview-feedback', icon: 'feedback' },
     { name: 'Settings', path: '/admin/team-settings', icon: 'settings' },
   ];
 

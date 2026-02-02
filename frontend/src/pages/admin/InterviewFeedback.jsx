@@ -144,7 +144,7 @@ const InterviewFeedback = () => {
 
   if (loading) {
     return (
-      <AdminLayout title="Interview Feedback">
+      <AdminLayout title="Interview Experience">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#1a365d] border-t-transparent"></div>
         </div>
@@ -153,13 +153,13 @@ const InterviewFeedback = () => {
   }
 
   return (
-    <AdminLayout title="Interview Feedback">
+    <AdminLayout title="Interview Experience">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Feedback Tasks</h2>
-            <p className="text-gray-500 text-sm mt-1">Manage interview feedback collection from students</p>
+            <p className="text-gray-500 text-sm mt-1">Manage interview experience collection from students</p>
           </div>
           <button
             onClick={() => {
@@ -185,7 +185,7 @@ const InterviewFeedback = () => {
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No Feedback Tasks</h3>
-            <p className="text-gray-500">Create your first feedback task to start collecting interview feedback</p>
+            <p className="text-gray-500">Create your first feedback task to start collecting interview experience</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -285,7 +285,7 @@ const InterviewFeedback = () => {
             <div className="px-6 py-4 border-b border-gray-100 bg-[#1a365d] flex items-center justify-between shrink-0">
               <div className="text-white">
                 <h3 className="font-semibold text-lg">{editingTask ? 'Edit Task' : 'Create Feedback Task'}</h3>
-                <p className="text-sm text-white/80">Request interview feedback from students</p>
+                <p className="text-sm text-white/80">Request interview experience from students</p>
               </div>
               <button
                 onClick={() => { setShowTaskModal(false); setEditingTask(null); }}

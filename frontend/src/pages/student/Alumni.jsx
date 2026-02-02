@@ -161,7 +161,7 @@ const Alumni = () => {
     { name: 'Attendance', path: '/student/attendance', icon: 'calendar' },
     { name: 'Resources', path: '/student/resources', icon: 'book' },
     { name: 'Alumni Network', path: '/student/alumni', icon: 'users', current: true },
-    { name: 'Interview Feedback', path: '/student/feedback', icon: 'feedback' },
+    { name: 'Interview Experience', path: '/student/feedback', icon: 'feedback' },
   ];
 
   const getIcon = (iconName) => {
@@ -201,7 +201,6 @@ const Alumni = () => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-8a2 2 0 012-2h14a2 2 0 012 2v8M3 13V4a2 2 0 012-2h4l2 3h6a2 2 0 012 2v1l-2 3h-4l-2-3H5a2 2 0 00-2 2v9" />
             </svg>
-        );
         );
       default:
         return null;

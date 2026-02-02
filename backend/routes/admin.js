@@ -610,7 +610,6 @@ router.get('/dashboard', async (req, res) => {
     res.json({
       totalStudents,
       totalAlumni,
-      totalCompanies,
       totalEvents,
       totalResources,
       attendance: {
