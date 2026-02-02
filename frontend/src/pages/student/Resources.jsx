@@ -20,6 +20,8 @@ const Resources = () => {
   // Format name
   const formatName = (name) => {
     if (!name) return '';
+
+    
     return name
       .toLowerCase()
       .split(' ')
@@ -549,7 +551,6 @@ const Resources = () => {
                                 Open
                               </a>
                             )
-                          )}
                           )}
                         </div>
                       </div>

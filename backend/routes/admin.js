@@ -3,6 +3,7 @@ import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import User from '../models/User.js';
 import Attendance from '../models/Attendance.js';
 import Team from '../models/Team.js';
@@ -31,7 +32,213 @@ const storage = multer.diskStorage({
   }
 });
 
+// Update alumni
+router.put('/alumni/:id', async (req, res) => {
+  try {
+    const { name, email, company, roleAtCompany, yearOfPassing, isActive } = req.body;
+    if (email) {
+      const dup = await User.findOne({ _id: { $ne: req.params.id }, email: email.toLowerCase(), isBYTSAlumni: true });
+      if (dup) return res.status(400).json({ message: 'Another user already uses this email' });
+    }
+    const update = { name, company, roleAtCompany, yearOfPassing, role: 'alumni', isBYTSAlumni: true };
+    if (email) update.email = email.toLowerCase();
+    if (typeof isActive === 'boolean') update.isActive = isActive;
+    const alum = await User.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true }).select('-password');
+    if (!alum) return res.status(404).json({ message: 'Alumni not found' });
+    res.json({ message: 'Alumni updated', alumni: alum });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete alumni
+router.delete('/alumni/:id', async (req, res) => {
+  try {
+    const deleted = await User.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: 'Alumni not found' });
+    res.json({ message: 'Alumni deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update a student
+router.put('/students/:id', async (req, res) => {
+  try {
+    const { name, email, studentId, department, year, isActive } = req.body;
+
+    // Ensure email/studentId are unique across others
+    if (email) {
+      const duplicateEmail = await User.findOne({ _id: { $ne: req.params.id }, email: email.toLowerCase() });
+      if (duplicateEmail) {
+        return res.status(400).json({ message: 'Another user already uses this email' });
+      }
+    }
+    if (studentId) {
+      const duplicateRoll = await User.findOne({ _id: { $ne: req.params.id }, studentId });
+      if (duplicateRoll) {
+        return res.status(400).json({ message: 'Another user already uses this student ID' });
+      }
+    }
+
+    const update = { name, department, year, role: 'student' };
+    if (email) update.email = email.toLowerCase();
+    if (studentId) update.studentId = studentId;
+    if (typeof isActive === 'boolean') update.isActive = isActive;
+
+    const student = await User.findByIdAndUpdate(
+      req.params.id,
+      update,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    res.json({ message: 'Student updated', student });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete a student
+router.delete('/students/:id', async (req, res) => {
+  try {
+    const deleted = await User.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    res.json({ message: 'Student deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Initialize upload before routes that use it
 const upload = multer({ storage: storage });
+
+// Generate initial password as per policy: `${studentId}@${Name}` where Name is first word, letters only, capitalized
+const generateInitialPassword = (fullName, studentId) => {
+  const firstWord = String(fullName || '')
+    .trim()
+    .split(/\s+/)[0]
+    .replace(/[^a-zA-Z]/g, '');
+  const cap = firstWord
+    ? firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase()
+    : 'Student';
+  const id = String(studentId || '').trim();
+  return `${id}@${cap}`;
+};
+
+// Generate alumni initial password: `${Name}@${Year}` where Name is first word, letters only, capitalized
+const generateAlumniPassword = (fullName, yearOfPassing) => {
+  const firstWord = String(fullName || '')
+    .trim()
+    .split(/\s+/)[0]
+    .replace(/[^a-zA-Z]/g, '');
+  const cap = firstWord
+    ? firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase()
+    : 'Alumni';
+  const year = String(yearOfPassing || '').trim();
+  return `${cap}@${year}`;
+};
+
+// Bulk import students from CSV/XLSX
+router.post('/students/import', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // Read with xlsx (supports .csv and .xlsx)
+    const workbook = xlsx.readFile(req.file.path, { raw: true });
+    const firstSheet = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheet];
+    const rows = xlsx.utils.sheet_to_json(worksheet, { defval: '' });
+
+    if (!rows.length) {
+      return res.status(400).json({ message: 'File is empty' });
+    }
+
+    // Normalize header keys
+    const normalize = (k) => String(k).trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+    let created = 0;
+    let updated = 0;
+    const credentials = [];
+    const errors = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      // Map fields by tolerant header names
+      const map = {};
+      for (const key of Object.keys(row)) {
+        map[normalize(key)] = row[key];
+      }
+
+      const name = map['name'] || map['studentname'] || '';
+      const email = (map['email'] || '').toString().trim().toLowerCase();
+      const studentId = map['rollno'] || map['rollnumber'] || map['roll'] || '';
+      const department = map['dept'] || map['department'] || '';
+      const year = map['year'] || '';
+
+      if (!name || !email || !studentId) {
+        errors.push({ row: i + 2, message: 'Missing required fields (name/email/roll no)' });
+        continue;
+      }
+
+      // Upsert by email or studentId
+      const existing = await User.findOne({
+        $or: [{ email }, { studentId }]
+      });
+
+      if (existing) {
+        existing.name = name;
+        existing.email = email;
+        existing.studentId = studentId;
+        existing.department = department;
+        existing.year = year;
+        existing.role = 'student';
+        // If student has no password yet, set a generated one
+        if (!existing.password) {
+          const pwd = generateInitialPassword(name, studentId);
+          existing.password = pwd;
+          credentials.push({ name, email, studentId, password: pwd });
+        }
+        await existing.save();
+        updated++;
+        continue;
+      }
+
+      const pwd = generateInitialPassword(name, studentId);
+      const user = new User({
+        name,
+        email,
+        role: 'student',
+        studentId,
+        department,
+        year,
+        password: pwd
+      });
+      await user.save();
+      credentials.push({ name, email, studentId, password: pwd });
+      created++;
+    }
+
+    // Clean up uploaded file
+    try { fs.unlinkSync(req.file.path); } catch (e) {}
+
+    res.status(201).json({
+      message: 'Import processed',
+      summary: { created, updated, errors: errors.length },
+      errors,
+      credentials
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Add Student
 router.post('/students', async (req, res) => {
@@ -234,7 +441,7 @@ router.post('/alumni/upload', upload.single('file'), async (req, res) => {
 
     if (data.length === 0) {
       fs.unlinkSync(req.file.path);
-      return res.status(400).j~son({ 
+      return res.status(400).json({ 
         message: 'No data found in Excel file. Please check if the file has data rows.',
         imported: 0,
         errors: ['File appears to be empty or has no data rows']
@@ -243,6 +450,7 @@ router.post('/alumni/upload', upload.single('file'), async (req, res) => {
 
     const alumniRecords = [];
     const errors = [];
+    const credentials = [];
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
@@ -265,11 +473,11 @@ router.post('/alumni/upload', upload.single('file'), async (req, res) => {
           return '';
         };
 
-        const name = getValue(['Name', 'name', 'NAME', 'Full Name', 'FullName', 'Student Name']);
-        const company = getValue(['Company', 'company', 'COMPANY', 'Company Name', 'CompanyName', 'Organization']);
-        const role = getValue(['Role', 'role', 'ROLE', 'Role at Company', 'RoleAtCompany', 'Position', 'Designation']);
-        const yearOfPassing = getValue(['Year of passing', 'Year of Passing', 'YearOfPassing', 'yearOfPassing', 'Year', 'Passing Year', 'Graduation Year']);
-        let email = getValue(['Email', 'email', 'EMAIL', 'Email Address', 'EmailAddress']);
+        const name = getValue(['Name', 'name', 'Full Name', 'FullName']);
+        const company = getValue(['CompanyName', 'Company', 'Organization']);
+        const role = getValue(['Position', 'Role', 'Role at Company', 'Designation']);
+        const yearOfPassing = getValue(['PassedOutYear', 'PassedOut Year', 'Year of passing', 'YearOfPassing', 'Graduation Year', 'Year']);
+        let email = getValue(['Email', 'Email Address', 'email']);
         
         // Generate email if not provided
         if (!email && name) {
@@ -285,38 +493,38 @@ router.post('/alumni/upload', upload.single('file'), async (req, res) => {
           continue;
         }
 
-        // Check for duplicate by email
-        const existing = await User.findOne({
-          email: email.toLowerCase(),
-          isBYTSAlumni: true
-        });
-
+        // Upsert by email (case-insensitive)
+        const existing = await User.findOne({ email: email.toLowerCase(), isBYTSAlumni: true });
         if (existing) {
-          errors.push({ 
-            row: i + 2, 
-            error: 'Alumni with this email already exists',
-            data: { name, email }
+          existing.name = name.trim();
+          existing.company = company.trim();
+          existing.roleAtCompany = role.trim() || '';
+          existing.yearOfPassing = yearOfPassing.toString().trim() || '';
+          existing.role = 'alumni';
+          existing.isBYTSAlumni = true;
+          if (!existing.password) {
+            const pwd = generateAlumniPassword(name, yearOfPassing);
+            existing.password = pwd;
+            credentials.push({ name, email: existing.email, password: pwd, type: 'alumni' });
+          }
+          await existing.save();
+          alumniRecords.push({ _id: existing._id, name: existing.name, email: existing.email, company: existing.company });
+        } else {
+          const pwd = generateAlumniPassword(name, yearOfPassing);
+          const alumni = new User({
+            name: name.trim(),
+            email: email.toLowerCase().trim(),
+            company: company.trim(),
+            roleAtCompany: role.trim() || '',
+            yearOfPassing: yearOfPassing.toString().trim() || '',
+            role: 'alumni',
+            isBYTSAlumni: true,
+            password: pwd
           });
-          continue;
+          await alumni.save();
+          credentials.push({ name: alumni.name, email: alumni.email, password: pwd, type: 'alumni' });
+          alumniRecords.push({ _id: alumni._id, name: alumni.name, email: alumni.email, company: alumni.company });
         }
-
-        const alumni = new User({
-          name: name.trim(),
-          email: email.toLowerCase().trim(),
-          company: company.trim(),
-          roleAtCompany: role.trim() || '',
-          yearOfPassing: yearOfPassing.toString().trim() || '',
-          role: 'alumni',
-          isBYTSAlumni: true
-        });
-
-        await alumni.save();
-        alumniRecords.push({
-          _id: alumni._id,
-          name: alumni.name,
-          email: alumni.email,
-          company: alumni.company
-        });
       } catch (error) {
         errors.push({ 
           row: i + 2, 
@@ -335,12 +543,13 @@ router.post('/alumni/upload', upload.single('file'), async (req, res) => {
 
     res.json({
       message: alumniRecords.length > 0 
-        ? `Successfully imported ${alumniRecords.length} alumni record(s)` 
-        : 'No alumni records were imported',
+        ? `Processed ${alumniRecords.length} alumni record(s)` 
+        : 'No alumni records were processed',
       imported: alumniRecords.length,
       totalRows: data.length,
-      errors: errors.length > 0 ? errors.slice(0, 10) : undefined, // Limit errors to first 10
-      errorCount: errors.length
+      errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
+      errorCount: errors.length,
+      credentials
     });
   } catch (error) {
     // Clean up file on error
