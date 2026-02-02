@@ -375,9 +375,11 @@ router.get('/dashboard', async (req, res) => {
   try {
     const totalStudents = await User.countDocuments({ role: 'student' });
     const totalAlumni = await User.countDocuments({ role: 'alumni', isBYTSAlumni: true });
-    const totalTeams = await Team.countDocuments({ status: 'active' });
-    const totalProblemStatements = await ProblemStatement.countDocuments();
+    // const totalTeams = await Team.countDocuments({ status: 'active' });
+    // const totalProblemStatements = await ProblemStatement.countDocuments();
     const totalCompanies = await Company.countDocuments();
+    const totalEvents = await Event.countDocuments();
+    const totalResources = await Resource.countDocuments();
 
     // Attendance statistics
     const totalAttendanceRecords = await Attendance.countDocuments();
@@ -398,9 +400,9 @@ router.get('/dashboard', async (req, res) => {
     res.json({
       totalStudents,
       totalAlumni,
-      totalTeams,
-      totalProblemStatements,
       totalCompanies,
+      totalEvents,
+      totalResources,
       attendance: {
         totalRecords: totalAttendanceRecords,
         presentRecords,
