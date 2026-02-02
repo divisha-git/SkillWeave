@@ -15,6 +15,7 @@ const Resources = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [profilePic, setProfilePic] = useState(null);
+  const [downloading, setDownloading] = useState(null);
 
   // Format name
   const formatName = (name) => {
@@ -36,6 +37,33 @@ const Resources = () => {
     logout();
     navigate('/login');
     toast.success('Logged out successfully');
+  };
+
+  // Handle file download
+  const handleDownload = async (resource) => {
+    try {
+      setDownloading(resource._id);
+      const response = await api.get(`/student/resources/${resource._id}/download`, {
+        responseType: 'blob'
+      });
+      
+      // Create blob and download
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = resource.fileName || 'download';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Download started!');
+    } catch (error) {
+      toast.error('Failed to download file');
+    } finally {
+      setDownloading(null);
+    }
   };
 
   useEffect(() => {
@@ -79,56 +107,84 @@ const Resources = () => {
 
   // Get category icon
   const getCategoryIcon = (category) => {
-    const icons = {
-      'Web Development': (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-        </svg>
-      ),
-      'Machine Learning': (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      ),
-      'Data Science': (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
-      'Mobile Development': (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-        </svg>
-      ),
-      'Cloud Computing': (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-        </svg>
-      ),
-      'Cybersecurity': (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-    };
-    return icons[category] || (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-      </svg>
-    );
+    switch(category) {
+      case 'Notes':
+        return '📝';
+      case 'Videos':
+        return '🎬';
+      case 'Books':
+        return '📚';
+      case 'Links':
+        return '🔗';
+      case 'Assignments':
+        return '📋';
+      default:
+        return '📁';
+    }
   };
 
   // Get category color
   const getCategoryColor = (category) => {
-    const colors = {
-      'Web Development': 'bg-blue-500',
-      'Machine Learning': 'bg-purple-500',
-      'Data Science': 'bg-green-500',
-      'Mobile Development': 'bg-orange-500',
-      'Cloud Computing': 'bg-cyan-500',
-      'Cybersecurity': 'bg-red-500',
-    };
-    return colors[category] || 'bg-[#1a365d]';
+    switch(category) {
+      case 'Notes':
+        return 'from-blue-500 to-blue-600';
+      case 'Videos':
+        return 'from-red-500 to-red-600';
+      case 'Books':
+        return 'from-purple-500 to-purple-600';
+      case 'Links':
+        return 'from-green-500 to-green-600';
+      case 'Assignments':
+        return 'from-yellow-500 to-orange-500';
+      default:
+        return 'from-gray-500 to-gray-600';
+    }
+  };
+
+  // Get category badge color
+  const getCategoryBadgeColor = (category) => {
+    switch(category) {
+      case 'Notes':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'Videos':
+        return 'bg-red-100 text-red-700 border-red-200';
+      case 'Books':
+        return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'Links':
+        return 'bg-green-100 text-green-700 border-green-200';
+      case 'Assignments':
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  // Get file icon based on extension
+  const getFileIcon = (fileName) => {
+    if (!fileName) return '📄';
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    switch(ext) {
+      case 'pdf':
+        return '📕';
+      case 'doc':
+      case 'docx':
+        return '📘';
+      case 'ppt':
+      case 'pptx':
+        return '📙';
+      case 'xls':
+      case 'xlsx':
+        return '📗';
+      case 'zip':
+      case 'rar':
+        return '🗜️';
+      case 'mp4':
+      case 'avi':
+      case 'mkv':
+        return '🎥';
+      default:
+        return '📄';
+    }
   };
 
   // Navigation items for sidebar
@@ -195,11 +251,13 @@ const Resources = () => {
       <aside className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <img 
-              src="/kec-2.png" 
-              alt="KEC Logo" 
-              className="h-10 w-auto object-contain"
-            />
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm flex-shrink-0">
+              <img 
+                src="/kec-2.png" 
+                alt="KEC Logo" 
+                className="w-full h-full object-cover"
+              />
+            </div>
             <div>
               <h1 className="text-lg font-bold text-[#1a365d]">BYTSKEC</h1>
               <p className="text-xs text-gray-500 -mt-0.5">Student Portal</p>
@@ -252,11 +310,13 @@ const Resources = () => {
                   </svg>
                 </button>
                 <div className="flex items-center gap-2">
-                  <img 
-                    src="/kec-2.png" 
-                    alt="KEC Logo" 
-                    className="h-8 w-auto object-contain"
-                  />
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-white shadow-sm flex-shrink-0">
+                    <img 
+                      src="/kec-2.png" 
+                      alt="KEC Logo" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   <span className="text-white font-bold text-lg">BYTSKEC</span>
                 </div>
               </div>
@@ -347,13 +407,14 @@ const Resources = () => {
           </div>
 
           {/* Category Pills */}
+          {/* Category Pills */}
           {categories.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-6">
               <button
                 onClick={() => setSelectedCategory('')}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   !selectedCategory 
-                    ? 'bg-[#1a365d] text-white' 
+                    ? 'bg-[#1a365d] text-white shadow-md' 
                     : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                 }`}
               >
@@ -363,12 +424,13 @@ const Resources = () => {
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
                     selectedCategory === cat 
-                      ? 'bg-[#1a365d] text-white' 
+                      ? 'bg-[#1a365d] text-white shadow-md' 
                       : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                 >
+                  <span>{getCategoryIcon(cat)}</span>
                   {cat}
                 </button>
               ))}
@@ -379,51 +441,116 @@ const Resources = () => {
           {Object.keys(groupedResources).length > 0 ? (
             Object.entries(groupedResources).map(([category, categoryResources]) => (
               <div key={category} className="mb-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-10 h-10 rounded-xl ${getCategoryColor(category)} flex items-center justify-center text-white`}>
+                {/* Category Header */}
+                <div className="flex items-center gap-4 mb-5">
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getCategoryColor(category)} flex items-center justify-center text-white text-2xl shadow-lg`}>
                     {getCategoryIcon(category)}
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">{category}</h2>
-                    <p className="text-sm text-gray-500">{categoryResources.length} resource(s)</p>
+                    <h2 className="text-xl font-bold text-gray-900">{category}</h2>
+                    <p className="text-sm text-gray-500">{categoryResources.length} resource{categoryResources.length > 1 ? 's' : ''} available</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Resources Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {categoryResources.map((resource) => (
-                    <div key={resource._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                    <div 
+                      key={resource._id} 
+                      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:border-gray-200 transition-all duration-300 group"
+                    >
+                      {/* Card Header with Gradient */}
+                      <div className={`h-2 bg-gradient-to-r ${getCategoryColor(resource.category)}`}></div>
+                      
                       <div className="p-5">
-                        <div className="flex items-start justify-between mb-3">
-                          <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                            resource.type === 'video' ? 'bg-red-100 text-red-600' :
-                            resource.type === 'document' ? 'bg-blue-100 text-blue-600' :
-                            resource.type === 'link' ? 'bg-green-100 text-green-600' :
-                            'bg-gray-100 text-gray-600'
-                          }`}>
-                            {resource.type || 'Resource'}
+                        {/* Category Badge */}
+                        <div className="flex items-center justify-between mb-3">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getCategoryBadgeColor(resource.category)}`}>
+                            {getCategoryIcon(resource.category)} {resource.category}
                           </span>
-                          {resource.isNew && (
-                            <span className="px-2 py-0.5 bg-[#1a365d] text-white text-xs font-medium rounded-full">NEW</span>
+                          {resource.department && resource.department !== 'All' && (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-lg">
+                              {resource.department}
+                            </span>
                           )}
                         </div>
-                        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{resource.title}</h3>
-                        <p className="text-sm text-gray-500 mb-4 line-clamp-2">{resource.description}</p>
                         
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-400">
-                            {new Date(resource.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          </span>
-                          <a
-                            href={resource.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-[#1a365d] font-medium hover:underline"
-                          >
-                            Open
+                        {/* Title */}
+                        <h3 className="font-bold text-gray-900 text-lg mb-3 line-clamp-2 group-hover:text-[#1a365d] transition-colors">
+                          {resource.title}
+                        </h3>
+                        
+                        {/* File Info */}
+                        {resource.fileName && (
+                          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl mb-3 border border-gray-100">
+                            <span className="text-2xl">{getFileIcon(resource.fileName)}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">{resource.fileName}</p>
+                              <p className="text-xs text-gray-500">Click to download</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* External Link */}
+                        {resource.url && !resource.fileUrl && (
+                          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-xl mb-3 border border-blue-100">
+                            <span className="text-2xl">🔗</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-blue-800 truncate">{resource.url}</p>
+                              <p className="text-xs text-blue-500">External link</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Meta Info */}
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                          </a>
+                            {new Date(resource.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                          
+                          {/* Download/Open Button */}
+                          {(resource.fileUrl || resource.url) && (
+                            resource.fileUrl ? (
+                              <button
+                                onClick={() => handleDownload(resource)}
+                                disabled={downloading === resource._id}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-[#1a365d] text-white hover:bg-[#2d4a7c] shadow-md hover:shadow-lg disabled:opacity-50"
+                              >
+                                {downloading === resource._id ? (
+                                  <>
+                                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.25"></circle>
+                                      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Downloading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Download
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              <a
+                                href={resource.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-blue-100 text-blue-700 hover:bg-blue-200"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                Open
+                              </a>
+                            )
+                          )}
+                          )}
                         </div>
                       </div>
                     </div>
@@ -434,12 +561,10 @@ const Resources = () => {
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12">
               <div className="flex flex-col items-center text-center">
-                <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                  <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-4">
+                  <span className="text-4xl">📚</span>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Resources Available</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Resources Available</h3>
                 <p className="text-gray-500 max-w-md">
                   {searchQuery || selectedCategory 
                     ? 'No resources match your search criteria. Try adjusting your filters.'

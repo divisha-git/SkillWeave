@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import fs from 'fs';
+import path from 'path';
 import User from '../models/User.js';
 import Attendance from '../models/Attendance.js';
 import Team from '../models/Team.js';
@@ -10,14 +11,27 @@ import Company from '../models/Company.js';
 import Message from '../models/Message.js';
 import Settings from '../models/Settings.js';
 import Event from '../models/Event.js';
+import Resource from '../models/Resource.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 router.use(authenticate);
 router.use(authorize('admin'));
 
-// Configure multer for file uploads
-const upload = multer({ dest: 'uploads/' });
+// Configure multer for file uploads with proper file naming
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename with original extension
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
+});
+
+const upload = multer({ storage: storage });
 
 // Add Student
 router.post('/students', async (req, res) => {
@@ -220,7 +234,7 @@ router.post('/alumni/upload', upload.single('file'), async (req, res) => {
 
     if (data.length === 0) {
       fs.unlinkSync(req.file.path);
-      return res.status(400).json({ 
+      return res.status(400).j~son({ 
         message: 'No data found in Excel file. Please check if the file has data rows.',
         imported: 0,
         errors: ['File appears to be empty or has no data rows']
@@ -640,6 +654,107 @@ router.delete('/problem-statements/:id', async (req, res) => {
     );
 
     res.json({ message: 'Problem Statement deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== RESOURCES MANAGEMENT ====================
+
+// Get all resources
+router.get('/resources', async (req, res) => {
+  try {
+    const resources = await Resource.find()
+      .populate('uploadedBy', 'name')
+      .sort({ createdAt: -1 });
+    res.json(resources);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Add a new resource with file upload
+router.post('/resources', upload.single('file'), async (req, res) => {
+  try {
+    const { title, category, url, department, year } = req.body;
+
+    if (!title || !category) {
+      return res.status(400).json({ message: 'Title and category are required' });
+    }
+
+    const resourceData = {
+      title,
+      category,
+      url: url || '',
+      department: department || 'All',
+      year: year || 'All',
+      uploadedBy: req.user._id
+    };
+
+    // Handle file upload
+    if (req.file) {
+      resourceData.fileUrl = `/uploads/${req.file.filename}`;
+      resourceData.fileName = req.file.originalname;
+    }
+
+    const resource = new Resource(resourceData);
+
+    await resource.save();
+
+    const populatedResource = await Resource.findById(resource._id)
+      .populate('uploadedBy', 'name');
+
+    res.status(201).json({
+      message: 'Resource added successfully',
+      resource: populatedResource
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update a resource with file upload
+router.put('/resources/:id', upload.single('file'), async (req, res) => {
+  try {
+    const { title, category, url, department, year, isActive } = req.body;
+
+    const updateData = { title, category, url, department, year, isActive };
+
+    // Handle file upload
+    if (req.file) {
+      updateData.fileUrl = `/uploads/${req.file.filename}`;
+      updateData.fileName = req.file.originalname;
+    }
+
+    const resource = await Resource.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    ).populate('uploadedBy', 'name');
+
+    if (!resource) {
+      return res.status(404).json({ message: 'Resource not found' });
+    }
+
+    res.json({
+      message: 'Resource updated successfully',
+      resource
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete a resource
+router.delete('/resources/:id', async (req, res) => {
+  try {
+    const resource = await Resource.findByIdAndDelete(req.params.id);
+
+    if (!resource) {
+      return res.status(404).json({ message: 'Resource not found' });
+    }
+
+    res.json({ message: 'Resource deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -15,6 +15,7 @@ const Profile = () => {
   const [profilePic, setProfilePic] = useState(null);
   const [hackathons, setHackathons] = useState([]);
   const [unreadAlumniMessages, setUnreadAlumniMessages] = useState(0);
+  const [alumniMessages, setAlumniMessages] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const fileInputRef = useRef(null);
@@ -56,6 +57,7 @@ const Profile = () => {
     fetchProfile();
     fetchHackathons();
     fetchUnreadMessages();
+    fetchAlumniMessages();
   }, []);
 
   useEffect(() => {
@@ -104,6 +106,15 @@ const Profile = () => {
       setUnreadAlumniMessages(res.data?.count || 0);
     } catch (error) {
       setUnreadAlumniMessages(0);
+    }
+  };
+
+  const fetchAlumniMessages = async () => {
+    try {
+      const res = await api.get('/student/messages');
+      setAlumniMessages(res.data || []);
+    } catch (error) {
+      setAlumniMessages([]);
     }
   };
 
@@ -221,11 +232,13 @@ const Profile = () => {
       <aside className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <img 
-              src="/kec-2.png" 
-              alt="KEC Logo" 
-              className="h-10 w-auto object-contain"
-            />
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm flex-shrink-0">
+              <img 
+                src="/kec-2.png" 
+                alt="KEC Logo" 
+                className="w-full h-full object-cover"
+              />
+            </div>
             <div>
               <h1 className="text-lg font-bold text-[#1a365d]">BYTSKEC</h1>
               <p className="text-xs text-gray-500 -mt-0.5">Student Portal</p>
@@ -304,11 +317,13 @@ const Profile = () => {
                   </svg>
                 </button>
                 <div className="flex items-center gap-2">
-                  <img 
-                    src="/kec-2.png" 
-                    alt="KEC Logo" 
-                    className="h-8 w-auto object-contain"
-                  />
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-white shadow-sm flex-shrink-0">
+                    <img 
+                      src="/kec-2.png" 
+                      alt="KEC Logo" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   <span className="text-white font-bold text-lg">BYTSKEC</span>
                 </div>
               </div>
@@ -471,34 +486,83 @@ const Profile = () => {
 
             {/* Notifications Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#F59E0B] flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#F59E0B] flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Notifications</h3>
+                    <p className="text-xs text-gray-500">Recent updates</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Notifications</h3>
-                  <p className="text-xs text-gray-500">Recent updates</p>
-                </div>
+                {unreadAlumniMessages > 0 && (
+                  <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">{unreadAlumniMessages}</span>
+                )}
               </div>
-              <div className="p-5">
-                {(unreadAlumniMessages > 0 || hackathons.some(h => h.isNew)) ? (
+              <div className="p-5 max-h-64 overflow-y-auto">
+                {(alumniMessages.length > 0 || hackathons.some(h => h.isNew)) ? (
                   <div className="space-y-3">
-                    {unreadAlumniMessages > 0 && (
-                      <Link to="/student/alumni" className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
-                        <div className="w-8 h-8 rounded-full bg-[#1a365d] flex items-center justify-center text-white shrink-0">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 text-sm">{unreadAlumniMessages} new message(s)</p>
-                          <p className="text-xs text-gray-500">From alumni</p>
-                        </div>
-                        <span className="px-2 py-0.5 bg-[#1a365d] text-white text-xs font-bold rounded-full">{unreadAlumniMessages}</span>
-                      </Link>
-                    )}
+                    {/* Alumni Messages - Grouped by sender */}
+                    {(() => {
+                      // Group messages by alumni sender
+                      const groupedByAlumni = alumniMessages.reduce((acc, msg) => {
+                        const alumniId = msg.from?._id;
+                        if (!alumniId) return acc;
+                        if (!acc[alumniId]) {
+                          acc[alumniId] = {
+                            alumni: msg.from,
+                            messages: [],
+                            unreadCount: 0,
+                            latestMessage: null
+                          };
+                        }
+                        acc[alumniId].messages.push(msg);
+                        if (!msg.isRead) acc[alumniId].unreadCount++;
+                        // Track latest message by date
+                        if (!acc[alumniId].latestMessage || new Date(msg.createdAt) > new Date(acc[alumniId].latestMessage.createdAt)) {
+                          acc[alumniId].latestMessage = msg;
+                        }
+                        return acc;
+                      }, {});
+
+                      // Convert to array and sort by latest message date
+                      return Object.values(groupedByAlumni)
+                        .sort((a, b) => new Date(b.latestMessage?.createdAt) - new Date(a.latestMessage?.createdAt))
+                        .map((group) => (
+                          <Link 
+                            key={group.alumni._id}
+                            to="/student/alumni" 
+                            className={`flex items-start gap-3 p-3 rounded-xl hover:bg-blue-100 transition-colors ${group.unreadCount > 0 ? 'bg-blue-50' : 'bg-gray-50'}`}
+                          >
+                            <div className="w-10 h-10 rounded-full bg-[#1a365d] flex items-center justify-center text-white shrink-0 text-sm font-bold overflow-hidden">
+                              {group.alumni.profilePic ? (
+                                <img src={group.alumni.profilePic} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                group.alumni.name?.charAt(0)?.toUpperCase() || 'A'
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="font-medium text-gray-900 text-sm truncate">{formatName(group.alumni.name)}</p>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {group.unreadCount > 0 && (
+                                    <span className="px-2 py-0.5 bg-blue-500 text-white text-xs font-bold rounded-full">{group.unreadCount}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-500 truncate">{group.alumni.company || 'Alumni'} • {group.messages.length} message{group.messages.length > 1 ? 's' : ''}</p>
+                              <p className="text-xs text-gray-600 mt-1 line-clamp-2">{group.latestMessage?.content}</p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {new Date(group.latestMessage?.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </Link>
+                        ));
+                    })()}
+                    {/* New Hackathons */}
                     {hackathons.filter(h => h.isNew).map((hackathon) => (
                       <div key={hackathon._id} className="flex items-center gap-3 p-3 bg-green-50 rounded-xl">
                         <div className="w-8 h-8 rounded-full bg-[#91C04A] flex items-center justify-center text-white shrink-0">

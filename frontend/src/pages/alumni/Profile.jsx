@@ -198,11 +198,13 @@ const Profile = () => {
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <div className="flex items-center gap-4">
-              <img 
-                src="/kec-2.png" 
-                alt="KEC Logo" 
-                className="h-14 w-auto object-contain"
-              />
+              <div className="w-14 h-14 rounded-full overflow-hidden bg-white shadow-sm flex-shrink-0">
+                <img 
+                  src="/kec-2.png" 
+                  alt="KEC Logo" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
               <div>
                 <h1 className="text-2xl font-bold text-white">BYTSKEC</h1>
                 <p className="text-xs text-white/80 -mt-1">Alumni Portal</p>

@@ -1,4 +1,7 @@
 import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import Attendance from '../models/Attendance.js';
 import Team from '../models/Team.js';
 import ProblemStatement from '../models/ProblemStatement.js';
@@ -7,7 +10,11 @@ import User from '../models/User.js';
 import Message from '../models/Message.js';
 import Settings from '../models/Settings.js';
 import Event from '../models/Event.js';
+import Resource from '../models/Resource.js';
 import { authenticate, authorize } from '../middleware/auth.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 router.use(authenticate);
@@ -1174,6 +1181,136 @@ router.get('/teams/:teamId', async (req, res) => {
     }
 
     res.json(team);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get student's hackathons/events
+router.get('/hackathons', async (req, res) => {
+  try {
+    const events = await Event.find({ status: 'active' }).sort({ startDate: -1 });
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get unread message count for student (messages from alumni)
+router.get('/messages/unread-count', async (req, res) => {
+  try {
+    // Count messages sent TO this student (from alumni) that are unread
+    const count = await Message.countDocuments({
+      to: req.user._id,
+      isRead: false
+    });
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get messages for student (from alumni)
+router.get('/messages', async (req, res) => {
+  try {
+    const messages = await Message.find({
+      to: req.user._id
+    })
+    .populate('from', 'name email company roleAtCompany profilePic')
+    .sort({ createdAt: -1 })
+    .limit(20);
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Mark message as read
+router.put('/messages/:id/read', async (req, res) => {
+  try {
+    const message = await Message.findOneAndUpdate(
+      { _id: req.params.id, to: req.user._id },
+      { isRead: true },
+      { new: true }
+    );
+    if (!message) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+    res.json(message);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get student attendance records
+router.get('/attendance', async (req, res) => {
+  try {
+    const attendances = await Attendance.find({ student: req.user._id })
+      .sort({ date: -1 });
+    
+    // Calculate stats
+    const total = attendances.length;
+    const present = attendances.filter(a => a.status === 'present').length;
+    const absent = attendances.filter(a => a.status === 'absent').length;
+    const percentage = total > 0 ? ((present / total) * 100).toFixed(2) : 0;
+
+    res.json({
+      records: attendances,
+      stats: {
+        total,
+        present,
+        absent,
+        percentage
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get resources for students
+router.get('/resources', async (req, res) => {
+  try {
+    const student = await User.findById(req.user._id);
+    
+    // Get resources for student's department/year or "All"
+    const resources = await Resource.find({
+      isActive: true,
+      $or: [
+        { department: 'All', year: 'All' },
+        { department: student.department, year: 'All' },
+        { department: 'All', year: student.year },
+        { department: student.department, year: student.year }
+      ]
+    })
+    .populate('uploadedBy', 'name')
+    .sort({ createdAt: -1 });
+
+    res.json(resources);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Download resource file
+router.get('/resources/:id/download', async (req, res) => {
+  try {
+    const resource = await Resource.findById(req.params.id);
+    
+    if (!resource || !resource.fileUrl) {
+      return res.status(404).json({ message: 'Resource or file not found' });
+    }
+
+    const filePath = path.join(__dirname, '..', resource.fileUrl);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'File not found on server' });
+    }
+
+    // Set proper headers for download
+    res.setHeader('Content-Disposition', `attachment; filename="${resource.fileName}"`);
+    res.sendFile(filePath);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -213,11 +213,13 @@ const Alumni = () => {
       <aside className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <img 
-              src="/kec-2.png" 
-              alt="KEC Logo" 
-              className="h-10 w-auto object-contain"
-            />
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-white shadow-sm flex-shrink-0">
+              <img 
+                src="/kec-2.png" 
+                alt="KEC Logo" 
+                className="w-full h-full object-cover"
+              />
+            </div>
             <div>
               <h1 className="text-lg font-bold text-[#1a365d]">BYTSKEC</h1>
               <p className="text-xs text-gray-500 -mt-0.5">Student Portal</p>
@@ -284,11 +286,13 @@ const Alumni = () => {
                   </svg>
                 </button>
                 <div className="flex items-center gap-2">
-                  <img 
-                    src="/kec-2.png" 
-                    alt="KEC Logo" 
-                    className="h-8 w-auto object-contain"
-                  />
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-white shadow-sm flex-shrink-0">
+                    <img 
+                      src="/kec-2.png" 
+                      alt="KEC Logo" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   <span className="text-white font-bold text-lg">BYTSKEC</span>
                 </div>
               </div>

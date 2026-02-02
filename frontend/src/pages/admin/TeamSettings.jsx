@@ -1,21 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import AdminLayout from '../../components/AdminLayout';
 
 const TeamSettings = () => {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
   const [teamSize, setTeamSize] = useState(5);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-    toast.success('Logged out successfully');
-  };
 
   useEffect(() => {
     fetchTeamSize();
@@ -46,31 +37,34 @@ const TeamSettings = () => {
   };
 
   if (loading) {
-    return <div className="p-8">Loading...</div>;
+    return (
+      <AdminLayout title="Settings">
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-[#1a365d] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-600 font-medium">Loading...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-[#1a365d] shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link to="/admin/dashboard" className="text-white font-bold">
-              ← Back to Dashboard
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-            >
-              Logout
-            </button>
+    <AdminLayout title="Settings ⚙️">
+      <div className="max-w-2xl">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-[#1a365d] flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Team Size Configuration</h3>
+              <p className="text-sm text-gray-500">Configure team member limits</p>
+            </div>
           </div>
-        </div>
-      </nav>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Team Size Settings</h2>
-
-        <div className="bg-white rounded-lg shadow p-6">
           <p className="text-gray-600 mb-6">
             Set the maximum number of members allowed in each team (including the team leader).
             This limit will apply to all teams in the system.
@@ -88,31 +82,36 @@ const TeamSettings = () => {
                 value={teamSize}
                 onChange={(e) => setTeamSize(parseInt(e.target.value))}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a365d] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent text-lg"
               />
               <p className="text-sm text-gray-500 mt-2">
                 Minimum: 2 members, Maximum: 20 members (including team leader)
               </p>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
-                <strong>Note:</strong> Changing the team size will update all existing teams' maximum size limit.
-                Team leaders will only be able to invite members up to this limit.
-              </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> Changing the team size will update all existing teams' maximum size limit.
+                  Team leaders will only be able to invite members up to this limit.
+                </p>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2 bg-[#1a365d] text-white rounded-lg hover:bg-[#2d3748] disabled:opacity-50"
+              className="w-full px-6 py-3 bg-[#1a365d] text-white rounded-xl hover:bg-[#2d4a7c] disabled:opacity-50 transition-colors font-medium"
             >
               {saving ? 'Saving...' : 'Save Team Size'}
             </button>
           </form>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

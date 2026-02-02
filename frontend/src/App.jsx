@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import LoadingScreen from './components/LoadingScreen';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 
@@ -13,6 +11,7 @@ import AdminStudents from './pages/admin/Students';
 import AdminAttendance from './pages/admin/Attendance';
 import AdminAlumni from './pages/admin/Alumni';
 import AdminTeamSettings from './pages/admin/TeamSettings';
+import AdminResources from './pages/admin/Resources';
 
 // Student pages
 import StudentProfile from './pages/student/Profile';
@@ -119,6 +118,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/resources"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminResources />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Student Routes */}
       <Route
@@ -172,21 +179,8 @@ function AppRoutes() {
 }
 
 function App() {
-  const [showLoading, setShowLoading] = useState(false);
-
-  useEffect(() => {
-    // Only show loading screen on first login (check sessionStorage)
-    const isFirstLogin = sessionStorage.getItem('firstLogin');
-    if (isFirstLogin === 'true') {
-      setShowLoading(true);
-      // Clear the flag after showing
-      sessionStorage.removeItem('firstLogin');
-    }
-  }, []);
-
   return (
     <AuthProvider>
-      {showLoading && <LoadingScreen onComplete={() => setShowLoading(false)} />}
       <Router>
         <AppRoutes />
         <Toaster position="top-right" />
