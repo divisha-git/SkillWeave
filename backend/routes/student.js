@@ -198,7 +198,7 @@ router.post('/teams', async (req, res) => {
     }
 
     // Get team size from settings
-    const maxTeamSize = 5;
+    const maxTeamSize = await Settings.getSetting('teamSize', 5);
 
     const team = new Team({
       name,

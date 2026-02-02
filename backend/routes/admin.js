@@ -377,7 +377,6 @@ router.get('/dashboard', async (req, res) => {
     const totalAlumni = await User.countDocuments({ role: 'alumni', isBYTSAlumni: true });
     // const totalTeams = await Team.countDocuments({ status: 'active' });
     // const totalProblemStatements = await ProblemStatement.countDocuments();
-    const totalCompanies = await Company.countDocuments();
     const totalEvents = await Event.countDocuments();
     const totalResources = await Resource.countDocuments();
 
