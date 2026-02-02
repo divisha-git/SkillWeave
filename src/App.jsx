@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import LoadingScreen from './components/LoadingScreen';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 
@@ -176,8 +178,11 @@ function AppRoutes() {
 }
 
 function App() {
+  const [showLoading, setShowLoading] = useState(true);
+
   return (
     <AuthProvider>
+      {showLoading && <LoadingScreen onComplete={() => setShowLoading(false)} />}
       <Router>
         <AppRoutes />
         <Toaster position="top-right" />

@@ -1,0 +1,274 @@
+@import url('https://fonts.googleapis.com/css?family=Dosis:200,600');
+
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  transition: opacity 1s ease-out;
+}
+
+.loading-screen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* KEC Logo Image */
+.kec-logo {
+  margin-bottom: 2rem;
+  animation: logoReveal 1.5s ease-out forwards;
+}
+
+.logo-image {
+  width: 180px;
+  height: auto;
+  object-fit: contain;
+}
+
+@media (min-width: 768px) {
+  .logo-image {
+    width: 220px;
+  }
+}
+
+@keyframes logoReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Opening Sequence Text Effect */
+.os-phrases {
+  font-family: 'Dosis', 'Segoe UI', Calibri, Arial, sans-serif;
+  overflow: hidden;
+}
+
+.os-phrases h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .os-phrases h2 {
+    font-size: 1.8rem;
+    letter-spacing: 0.2em;
+  }
+}
+
+@media (min-width: 1024px) {
+  .os-phrases h2 {
+    font-size: 2.2rem;
+  }
+}
+
+.os-phrases h2 > span {
+  display: inline-flex;
+}
+
+.os-phrases h2 > span > span {
+  display: inline-block;
+  perspective: 1000px;
+  transform-origin: 50% 50%;
+}
+
+.os-phrases h2 > span > span > span {
+  display: inline-block;
+  color: transparent;
+  transform-style: preserve-3d;
+  animation: OpeningSequence 4s ease-out forwards;
+}
+
+/* Cyan/Teal color for main title - matching KEC image */
+.os-phrases h2 > span > span > span {
+  background: linear-gradient(135deg, #00ACC1 0%, #0097A7 50%, #00838F 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Tagline styles */
+.os-phrases.tagline {
+  margin-top: 1rem;
+}
+
+.os-phrases.tagline h3 {
+  font-size: 0.9rem;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0.25em;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+@media (min-width: 768px) {
+  .os-phrases.tagline h3 {
+    font-size: 1.1rem;
+    letter-spacing: 0.3em;
+  }
+}
+
+.os-phrases.tagline h3 > span {
+  display: inline-flex;
+}
+
+.os-phrases.tagline h3 > span > span {
+  display: inline-block;
+  perspective: 1000px;
+  transform-origin: 50% 50%;
+}
+
+.os-phrases.tagline h3 > span > span > span {
+  display: inline-block;
+  color: transparent;
+  transform-style: preserve-3d;
+  animation: OpeningSequenceTagline 3.5s ease-out forwards;
+  /* Gray color for tagline - matching KEC image */
+  background: linear-gradient(135deg, #546E7A 0%, #607D8B 50%, #78909C 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Opening Sequence Animation - Main Title */
+@keyframes OpeningSequence {
+  0% {
+    text-shadow: 
+      0 0 50px rgba(0, 172, 193, 0.8),
+      0 0 100px rgba(0, 172, 193, 0.4);
+    letter-spacing: 0.5em;
+    opacity: 0;
+    transform: rotateY(-90deg) translateZ(-50px);
+  }
+  30% {
+    opacity: 0.6;
+  }
+  50% {
+    text-shadow: 
+      0 0 20px rgba(0, 172, 193, 0.6),
+      0 0 40px rgba(0, 172, 193, 0.3);
+    letter-spacing: 0.15em;
+    opacity: 1;
+    transform: rotateY(0deg) translateZ(0);
+  }
+  100% {
+    text-shadow: 
+      0 0 5px rgba(0, 172, 193, 0.3),
+      0 0 10px rgba(0, 172, 193, 0.1);
+    opacity: 1;
+    transform: rotateY(0deg) translateZ(0);
+  }
+}
+
+/* Opening Sequence Animation - Tagline */
+@keyframes OpeningSequenceTagline {
+  0% {
+    text-shadow: 
+      0 0 40px rgba(96, 125, 139, 0.8),
+      0 0 80px rgba(96, 125, 139, 0.4);
+    letter-spacing: 0.4em;
+    opacity: 0;
+    transform: rotateY(-90deg) translateZ(-30px);
+  }
+  30% {
+    opacity: 0.5;
+  }
+  50% {
+    text-shadow: 
+      0 0 15px rgba(96, 125, 139, 0.5),
+      0 0 30px rgba(96, 125, 139, 0.2);
+    letter-spacing: 0.25em;
+    opacity: 1;
+    transform: rotateY(0deg) translateZ(0);
+  }
+  100% {
+    text-shadow: 
+      0 0 3px rgba(96, 125, 139, 0.2);
+    opacity: 1;
+    transform: rotateY(0deg) translateZ(0);
+  }
+}
+
+/* Decorative line between title and tagline */
+.os-phrases.tagline::before {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #7CB342, #00ACC1, #7CB342, transparent);
+  margin: 0.8rem auto;
+  animation: lineReveal 1s ease-out 2.5s forwards;
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+@keyframes lineReveal {
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* Loading dots */
+.loading-dots {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 2.5rem;
+  animation: dotsReveal 0.5s ease-out 4s forwards;
+  opacity: 0;
+}
+
+.loading-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00ACC1;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.loading-dots span:nth-child(2) {
+  background: #43A047;
+}
+
+.loading-dots span:nth-child(3) {
+  background: #7CB342;
+}
+
+@keyframes dotsReveal {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}

@@ -53,6 +53,26 @@ const userSchema = new mongoose.Schema({
   yearOfPassing: {
     type: String
   },
+  experience: {
+    type: String,
+    trim: true
+  },
+  domain: {
+    type: String,
+    trim: true
+  },
+  interviewExperience: {
+    type: String,
+    trim: true
+  },
+  linkedin: {
+    type: String,
+    trim: true
+  },
+  phone: {
+    type: String,
+    trim: true
+  },
   isBYTSAlumni: {
     type: Boolean,
     default: false

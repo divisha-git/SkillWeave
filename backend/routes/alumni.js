@@ -17,6 +17,43 @@ router.get('/profile', async (req, res) => {
   }
 });
 
+// Update Alumni Profile
+router.put('/profile', async (req, res) => {
+  try {
+    const { 
+      name, 
+      yearOfPassing, 
+      company, 
+      experience, 
+      domain, 
+      interviewExperience, 
+      linkedin, 
+      email, 
+      phone 
+    } = req.body;
+
+    const alumni = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        name,
+        yearOfPassing,
+        company,
+        experience,
+        domain,
+        interviewExperience,
+        linkedin,
+        email,
+        phone
+      },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json(alumni);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get messages
 router.get('/messages', async (req, res) => {
   try {
