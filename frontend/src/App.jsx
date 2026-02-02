@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -16,10 +16,9 @@ import AdminTeamSettings from './pages/admin/TeamSettings';
 
 // Student pages
 import StudentProfile from './pages/student/Profile';
-import StudentTeams from './pages/student/Teams';
-import StudentCompanies from './pages/student/Companies';
 import StudentAlumni from './pages/student/Alumni';
-import ProblemStatements from './pages/student/ProblemStatements';
+import StudentAttendance from './pages/student/Attendance';
+import StudentResources from './pages/student/Resources';
 
 // Alumni pages
 import AlumniProfile from './pages/alumni/Profile';
@@ -29,8 +28,11 @@ function AppRoutes() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#F9FCF6]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#1a365d] border-t-transparent"></div>
+          <p className="text-gray-600 font-medium">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -128,26 +130,18 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/student/teams"
+        path="/student/attendance"
         element={
           <ProtectedRoute allowedRoles={['student']}>
-            <StudentTeams />
+            <StudentAttendance />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/student/problem-statements"
+        path="/student/resources"
         element={
           <ProtectedRoute allowedRoles={['student']}>
-            <ProblemStatements />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/student/companies"
-        element={
-          <ProtectedRoute allowedRoles={['student']}>
-            <StudentCompanies />
+            <StudentResources />
           </ProtectedRoute>
         }
       />
@@ -178,7 +172,17 @@ function AppRoutes() {
 }
 
 function App() {
-  const [showLoading, setShowLoading] = useState(true);
+  const [showLoading, setShowLoading] = useState(false);
+
+  useEffect(() => {
+    // Only show loading screen on first login (check sessionStorage)
+    const isFirstLogin = sessionStorage.getItem('firstLogin');
+    if (isFirstLogin === 'true') {
+      setShowLoading(true);
+      // Clear the flag after showing
+      sessionStorage.removeItem('firstLogin');
+    }
+  }, []);
 
   return (
     <AuthProvider>

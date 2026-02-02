@@ -37,6 +37,26 @@ const userSchema = new mongoose.Schema({
   year: {
     type: String
   },
+  // Student additional fields
+  skills: {
+    type: String,
+    trim: true
+  },
+  cgpa: {
+    type: String,
+    trim: true
+  },
+  achievements: {
+    type: String,
+    trim: true
+  },
+  resume: {
+    type: String,
+    trim: true
+  },
+  profilePic: {
+    type: String
+  },
   isActive: {
     type: Boolean,
     default: true

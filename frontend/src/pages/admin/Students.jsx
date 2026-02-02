@@ -58,16 +58,16 @@ const Students = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-[#1a365d] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <Link to="/admin/dashboard" className="text-primary-700 font-bold">
+            <Link to="/admin/dashboard" className="text-white font-bold">
               ← Back to Dashboard
             </Link>
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setShowForm(!showForm)}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                className="px-4 py-2 bg-white text-[#1a365d] rounded-lg hover:bg-gray-100"
               >
                 {showForm ? 'Cancel' : 'Add Student'}
               </button>
@@ -142,7 +142,7 @@ const Students = () => {
               <div className="flex items-end">
                 <button
                   type="submit"
-                  className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                  className="w-full px-4 py-2 bg-[#1a365d] text-white rounded-lg hover:bg-[#2d3748]"
                 >
                   Add Student
                 </button>

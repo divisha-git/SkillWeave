@@ -10,12 +10,18 @@ const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [conversation, setConversation] = useState([]);
+  const [chatMessage, setChatMessage] = useState('');
+  const [loadingChat, setLoadingChat] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [profilePic, setProfilePic] = useState(null);
   const fileInputRef = useRef(null);
+  const chatEndRef = useRef(null);
   const [profileForm, setProfileForm] = useState({
     name: '',
     yearOfPassing: '',
@@ -56,6 +62,13 @@ const Profile = () => {
     fetchMessages();
   }, []);
 
+  // Scroll to bottom when conversation changes
+  useEffect(() => {
+    if (showChatModal && conversation.length > 0) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [conversation, showChatModal]);
+
   useEffect(() => {
     if (profile) {
       setProfileForm({
@@ -94,6 +107,48 @@ const Profile = () => {
     }
   };
 
+  const fetchConversation = async (studentId) => {
+    setLoadingChat(true);
+    try {
+      const res = await api.get(`/alumni/students/${studentId}/conversation`);
+      setConversation(res.data.messages);
+      setSelectedStudent(res.data.student);
+      // Refresh messages after viewing conversation
+      fetchMessages();
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+      toast.error('Failed to load conversation');
+    } finally {
+      setLoadingChat(false);
+    }
+  };
+
+  const handleOpenChat = (message) => {
+    const studentId = message.from._id || message.from;
+    setShowChatModal(true);
+    setSelectedMessage(null);
+    fetchConversation(studentId);
+  };
+
+  const handleSendChatMessage = async (e) => {
+    e.preventDefault();
+    if (!chatMessage.trim() || !selectedStudent) return;
+    
+    try {
+      const res = await api.post(`/alumni/students/${selectedStudent._id}/chat`, {
+        content: chatMessage
+      });
+      setConversation(prev => [...prev, res.data]);
+      setChatMessage('');
+      // Scroll to bottom
+      setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } catch (error) {
+      toast.error('Failed to send message');
+    }
+  };
+
   const handleReply = async (messageId) => {
     if (!replyText.trim()) {
       toast.error('Please enter a reply');
@@ -128,7 +183,7 @@ const Profile = () => {
     return (
       <div className="min-h-screen bg-[#F9FCF6] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#009EDB] border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-[#1a365d] border-t-transparent rounded-full animate-spin"></div>
           <p className="text-gray-600 font-medium">Loading...</p>
         </div>
       </div>
@@ -138,13 +193,13 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-[#F9FCF6]">
       {/* Header */}
-      <header className="bg-[#009EDB] shadow-lg sticky top-0 z-40">
+      <header className="bg-[#1a365d] shadow-lg sticky top-0 z-40">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <div className="flex items-center gap-4">
               <img 
-                src="/kec-2.jpg" 
+                src="/kec-2.png" 
                 alt="KEC Logo" 
                 className="h-14 w-auto object-contain"
               />
@@ -160,12 +215,12 @@ const Profile = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                  className="flex items-center justify-center w-12 h-12 rounded-full bg-white text-[#009EDB] font-semibold text-lg hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#009EDB] overflow-hidden border-2 border-white/50"
+                  className="flex items-center justify-center w-12 h-12 rounded-full bg-white text-[#1a365d] font-semibold text-lg hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#1a365d] overflow-hidden border-2 border-white/50"
                 >
                   {profilePic ? (
                     <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-[#009EDB] font-bold">{getInitial(user?.name)}</span>
+                    <span className="text-[#1a365d] font-bold">{getInitial(user?.name)}</span>
                   )}
                 </button>
 
@@ -188,7 +243,7 @@ const Profile = () => {
                         }}
                         className="w-full px-4 py-2.5 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
                       >
-                        <svg className="w-5 h-5 text-[#009EDB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-[#1a365d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                         Edit Profile
@@ -214,7 +269,7 @@ const Profile = () => {
       {/* Main Content - Full Width */}
       <main className="w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Banner - Full Width */}
-        <div className="bg-[#009EDB] rounded-2xl p-6 mb-8 text-white shadow-lg">
+        <div className="bg-[#1a365d] rounded-2xl p-6 mb-8 text-white shadow-lg">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold mb-1">
@@ -246,7 +301,7 @@ const Profile = () => {
               <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#009EDB] flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-[#1a365d] flex items-center justify-center">
                       <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
@@ -257,7 +312,7 @@ const Profile = () => {
                     </div>
                   </div>
                   {unreadCount > 0 && (
-                    <span className="px-3 py-1 bg-[#009EDB] text-white text-sm font-medium rounded-full">
+                    <span className="px-3 py-1 bg-[#1a365d] text-white text-sm font-medium rounded-full">
                       {unreadCount} new
                     </span>
                   )}
@@ -269,13 +324,12 @@ const Profile = () => {
                   messages.map((message) => (
                     <div
                       key={message._id}
-                      onClick={() => setSelectedMessage(message)}
-                      className={`px-6 py-4 cursor-pointer transition-all duration-200 hover:bg-gray-50 ${
-                        !message.isRead ? 'bg-[#E0F7FA]' : ''
-                      } ${selectedMessage?._id === message._id ? 'bg-[#B2EBF2]' : ''}`}
+                      className={`px-6 py-4 transition-all duration-200 hover:bg-gray-50 ${
+                        !message.isRead ? 'bg-blue-50' : ''
+                      }`}
                     >
                       <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-full bg-[#009EDB] flex items-center justify-center text-white font-semibold flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-[#1a365d] flex items-center justify-center text-white font-semibold flex-shrink-0">
                           {getInitial(message.from?.name)}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -285,17 +339,30 @@ const Profile = () => {
                               {new Date(message.createdAt).toLocaleDateString()}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-600 mb-1">{message.from?.department}</p>
-                          <p className="font-medium text-gray-800 truncate">{message.subject}</p>
-                          <p className="text-sm text-gray-600 line-clamp-1 mt-1">{message.content}</p>
-                          {message.reply && (
-                            <div className="mt-2 flex items-center gap-2 text-[#4CAF50]">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                              <span className="text-sm font-medium">Replied</span>
-                            </div>
+                          <p className="text-sm text-gray-600 mb-1">{message.from?.department} • {message.from?.studentId}</p>
+                          {message.subject && (
+                            <p className="font-medium text-gray-800 truncate">{message.subject}</p>
                           )}
+                          <p className="text-sm text-gray-600 line-clamp-2 mt-1">{message.content}</p>
+                          <div className="mt-3 flex items-center gap-2">
+                            <button
+                              onClick={() => handleOpenChat(message)}
+                              className="px-3 py-1.5 bg-[#1a365d] text-white text-sm font-medium rounded-lg hover:bg-[#2d3748] transition-colors flex items-center gap-1"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              </svg>
+                              Open Chat
+                            </button>
+                            {message.reply && (
+                              <span className="flex items-center gap-1 text-[#4CAF50] text-sm">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                Replied
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -318,7 +385,7 @@ const Profile = () => {
           {/* Profile Card */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24 h-fit">
-              <div className="bg-[#009EDB] px-6 py-8 text-center relative">
+              <div className="bg-[#1a365d] px-6 py-8 text-center relative">
                 {/* Profile Picture with upload option */}
                 <div className="relative inline-block">
                   <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white text-3xl font-bold border-4 border-white/30 overflow-hidden">
@@ -333,7 +400,7 @@ const Profile = () => {
                     className="absolute bottom-3 right-0 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
                     title="Change profile picture"
                   >
-                    <svg className="w-4 h-4 text-[#009EDB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-[#1a365d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -345,8 +412,8 @@ const Profile = () => {
 
               <div className="px-6 py-5 space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-[#E0F7FA] flex items-center justify-center">
-                    <svg className="w-4 h-4 text-[#009EDB]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-9 h-9 rounded-lg bg-[#E2E8F0] flex items-center justify-center">
+                    <svg className="w-4 h-4 text-[#1a365d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
                   </div>
@@ -410,7 +477,7 @@ const Profile = () => {
 
                 <button
                   onClick={() => setShowProfileModal(true)}
-                  className="w-full mt-4 py-2.5 px-4 bg-[#009EDB] text-white font-medium rounded-xl hover:shadow-lg hover:shadow-[#009EDB]/25 transition-all duration-200"
+                  className="w-full mt-4 py-2.5 px-4 bg-[#1a365d] text-white font-medium rounded-xl hover:shadow-lg hover:shadow-[#1a365d]/25 transition-all duration-200"
                 >
                   Edit Profile
                 </button>
@@ -424,7 +491,7 @@ const Profile = () => {
       {selectedMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-[#009EDB]">
+            <div className="px-6 py-4 border-b border-gray-100 bg-[#1a365d]">
               <div className="flex items-center justify-between">
                 <div className="text-white">
                   <h3 className="font-semibold text-lg">{selectedMessage.subject}</h3>
@@ -446,7 +513,7 @@ const Profile = () => {
 
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-[#009EDB] flex items-center justify-center text-white font-bold text-lg">
+                <div className="w-12 h-12 rounded-full bg-[#1a365d] flex items-center justify-center text-white font-bold text-lg">
                   {selectedMessage.from?.name?.charAt(0)?.toUpperCase() || 'S'}
                 </div>
                 <div>
@@ -476,7 +543,7 @@ const Profile = () => {
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     rows={5}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009EDB] focus:border-transparent transition-all resize-none"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent transition-all resize-none"
                     placeholder="Share your thoughts, advice, or experience..."
                   />
                   <div className="flex justify-end gap-3 mt-4">
@@ -503,11 +570,125 @@ const Profile = () => {
         </div>
       )}
 
+      {/* Chat Modal */}
+      {showChatModal && selectedStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg h-[80vh] flex flex-col overflow-hidden">
+            {/* Chat Header */}
+            <div className="px-6 py-4 border-b border-gray-100 bg-[#1a365d] shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold overflow-hidden">
+                    {selectedStudent.profilePic ? (
+                      <img src={selectedStudent.profilePic} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      getInitial(selectedStudent.name)
+                    )}
+                  </div>
+                  <div className="text-white">
+                    <h3 className="font-semibold">{formatName(selectedStudent.name)}</h3>
+                    <p className="text-sm text-white/80">{selectedStudent.department} • {selectedStudent.year}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowChatModal(false);
+                    setSelectedStudent(null);
+                    setConversation([]);
+                    setChatMessage('');
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              {loadingChat ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="w-8 h-8 border-4 border-[#1a365d] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : conversation.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-4">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-500 font-medium">No messages yet</p>
+                  <p className="text-sm text-gray-400">Start a conversation with {formatName(selectedStudent.name)}</p>
+                </div>
+              ) : (
+                <>
+                  {conversation.map((msg) => {
+                    const isMyMessage = msg.from._id === user._id || msg.from === user._id;
+                    return (
+                      <div key={msg._id} className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[75%] ${isMyMessage ? 'order-2' : 'order-1'}`}>
+                          <div className={`rounded-2xl px-4 py-2.5 ${
+                            isMyMessage 
+                              ? 'bg-[#1a365d] text-white rounded-br-md' 
+                              : 'bg-white text-gray-800 rounded-bl-md shadow-sm'
+                          }`}>
+                            {msg.subject && (
+                              <p className={`text-xs font-medium mb-1 ${isMyMessage ? 'text-white/70' : 'text-gray-500'}`}>
+                                {msg.subject}
+                              </p>
+                            )}
+                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          </div>
+                          <p className={`text-xs text-gray-400 mt-1 ${isMyMessage ? 'text-right' : 'text-left'}`}>
+                            {new Date(msg.createdAt).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={chatEndRef} />
+                </>
+              )}
+            </div>
+
+            {/* Chat Input */}
+            <form onSubmit={handleSendChatMessage} className="p-4 border-t border-gray-100 bg-white shrink-0">
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={chatMessage}
+                  onChange={(e) => setChatMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent transition-all"
+                />
+                <button
+                  type="submit"
+                  disabled={!chatMessage.trim()}
+                  className="px-4 py-2.5 bg-[#91C04A] text-white font-medium rounded-xl hover:bg-[#7CB342] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Profile Edit Modal */}
       {showProfileModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-[#009EDB]">
+            <div className="px-6 py-4 border-b border-gray-100 bg-[#1a365d]">
               <div className="flex items-center justify-between">
                 <div className="text-white">
                   <h3 className="font-semibold text-lg">Edit Profile</h3>
@@ -528,7 +709,7 @@ const Profile = () => {
               {/* Profile Picture Upload */}
               <div className="flex justify-center mb-6">
                 <div className="relative">
-                  <div className="w-24 h-24 rounded-full bg-[#009EDB] flex items-center justify-center text-white text-3xl font-bold overflow-hidden border-4 border-gray-200">
+                  <div className="w-24 h-24 rounded-full bg-[#1a365d] flex items-center justify-center text-white text-3xl font-bold overflow-hidden border-4 border-gray-200">
                     {profileForm.profilePic ? (
                       <img src={profileForm.profilePic} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
@@ -555,7 +736,7 @@ const Profile = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 w-8 h-8 bg-[#009EDB] rounded-full shadow-lg flex items-center justify-center hover:bg-[#0077B5] transition-colors"
+                    className="absolute bottom-0 right-0 w-8 h-8 bg-[#1a365d] rounded-full shadow-lg flex items-center justify-center hover:bg-[#2d3748] transition-colors"
                     title="Change profile picture"
                   >
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -573,7 +754,7 @@ const Profile = () => {
                     type="text"
                     value={profileForm.name}
                     onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009EDB] focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent transition-all"
                     required
                   />
                 </div>
@@ -585,7 +766,7 @@ const Profile = () => {
                     value={profileForm.yearOfPassing}
                     onChange={(e) => setProfileForm({ ...profileForm, yearOfPassing: e.target.value })}
                     placeholder="e.g., 2020"
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009EDB] focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent transition-all"
                     required
                   />
                 </div>
@@ -597,7 +778,7 @@ const Profile = () => {
                     value={profileForm.company}
                     onChange={(e) => setProfileForm({ ...profileForm, company: e.target.value })}
                     placeholder="e.g., Google"
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009EDB] focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent transition-all"
                     required
                   />
                 </div>
@@ -609,7 +790,7 @@ const Profile = () => {
                     value={profileForm.experience}
                     onChange={(e) => setProfileForm({ ...profileForm, experience: e.target.value })}
                     placeholder="e.g., 3 years"
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009EDB] focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent transition-all"
                     required
                   />
                 </div>
@@ -621,7 +802,7 @@ const Profile = () => {
                     value={profileForm.domain}
                     onChange={(e) => setProfileForm({ ...profileForm, domain: e.target.value })}
                     placeholder="e.g., Full Stack Developer, Data Scientist"
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009EDB] focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent transition-all"
                     required
                   />
                 </div>
@@ -633,7 +814,7 @@ const Profile = () => {
                     onChange={(e) => setProfileForm({ ...profileForm, interviewExperience: e.target.value })}
                     rows={4}
                     placeholder="Share your interview experience, tips, and advice for students..."
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009EDB] focus:border-transparent transition-all resize-none"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent transition-all resize-none"
                   />
                 </div>
 
@@ -648,7 +829,7 @@ const Profile = () => {
                     value={profileForm.linkedin}
                     onChange={(e) => setProfileForm({ ...profileForm, linkedin: e.target.value })}
                     placeholder="https://linkedin.com/in/yourprofile"
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009EDB] focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent transition-all"
                   />
                 </div>
 
@@ -658,7 +839,7 @@ const Profile = () => {
                     type="email"
                     value={profileForm.email}
                     onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009EDB] focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent transition-all"
                     required
                   />
                 </div>
@@ -672,7 +853,7 @@ const Profile = () => {
                     value={profileForm.phone}
                     onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
                     placeholder="+91 XXXXXXXXXX"
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009EDB] focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a365d] focus:border-transparent transition-all"
                   />
                 </div>
               </div>
@@ -687,7 +868,7 @@ const Profile = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-[#009EDB] text-white font-medium rounded-xl hover:shadow-lg hover:shadow-[#009EDB]/25 transition-all"
+                  className="px-5 py-2.5 bg-[#1a365d] text-white font-medium rounded-xl hover:shadow-lg hover:shadow-[#1a365d]/25 transition-all"
                 >
                   Save Changes
                 </button>

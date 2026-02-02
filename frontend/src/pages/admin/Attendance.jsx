@@ -89,10 +89,10 @@ const Attendance = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-[#1a365d] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <Link to="/admin/dashboard" className="text-primary-700 font-bold">
+            <Link to="/admin/dashboard" className="text-white font-bold">
               ← Back to Dashboard
             </Link>
             <button
@@ -140,7 +140,7 @@ const Attendance = () => {
               <button
                 type="submit"
                 disabled={loading || students.length === 0}
-                className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                className="w-full px-4 py-2 bg-[#1a365d] text-white rounded-lg hover:bg-[#2d3748] disabled:opacity-50"
               >
                 {loading ? 'Saving...' : 'Mark Attendance'}
               </button>

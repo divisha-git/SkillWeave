@@ -62,9 +62,7 @@ const Signup = () => {
     if (result.success) {
       toast.success('Registration successful!');
       const user = JSON.parse(localStorage.getItem('user'));
-      if (user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (user.role === 'student') {
+      if (user.role === 'student') {
         navigate('/student/profile');
       } else if (user.role === 'alumni') {
         navigate('/alumni/profile');
@@ -154,21 +152,8 @@ const Signup = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Your Role *
             </label>
-            <div className="grid grid-cols-3 gap-4">
-              <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition ${
-                formData.role === 'admin' ? 'border-primary-500 bg-primary-50' : 'border-gray-300'
-              }`}>
-                <input
-                  type="radio"
-                  name="role"
-                  value="admin"
-                  checked={formData.role === 'admin'}
-                  onChange={handleChange}
-                  className="mr-2"
-                />
-                <span className="font-medium">Admin</span>
-              </label>
-              <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition ${
+            <div className="grid grid-cols-2 gap-4">
+              <label className={`flex items-center justify-center p-4 border-2 rounded-lg cursor-pointer transition ${
                 formData.role === 'student' ? 'border-primary-500 bg-primary-50' : 'border-gray-300'
               }`}>
                 <input
@@ -181,7 +166,7 @@ const Signup = () => {
                 />
                 <span className="font-medium">Student</span>
               </label>
-              <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition ${
+              <label className={`flex items-center justify-center p-4 border-2 rounded-lg cursor-pointer transition ${
                 formData.role === 'alumni' ? 'border-primary-500 bg-primary-50' : 'border-gray-300'
               }`}>
                 <input

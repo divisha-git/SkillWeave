@@ -30,17 +30,39 @@ const teamSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  event: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Event'
+  },
+  problemStatement: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProblemStatement'
+  },
   status: {
     type: String,
-    enum: ['active', 'disbanded'],
-    default: 'active'
+    enum: ['forming', 'active', 'disbanded'],
+    default: 'forming'
   },
   maxSize: {
     type: Number,
-    default: 5 // Default team size
+    default: 5
+  },
+  isComplete: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
 });
+
+// Virtual to check if team is complete
+teamSchema.virtual('currentSize').get(function() {
+  return this.members.length;
+});
+
+// Check if team can accept more members
+teamSchema.methods.canAddMember = function() {
+  return this.members.length < this.maxSize;
+};
 
 export default mongoose.model('Team', teamSchema);

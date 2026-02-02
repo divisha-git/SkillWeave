@@ -120,4 +120,76 @@ router.patch('/messages/:messageId/read', async (req, res) => {
   }
 });
 
+// Get conversation with specific student
+router.get('/students/:studentId/conversation', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const alumniId = req.user._id;
+
+    // Verify student exists
+    const student = await User.findById(studentId);
+    if (!student || student.role !== 'student') {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    // Get all messages between alumni and student
+    const messages = await Message.find({
+      $or: [
+        { from: alumniId, to: studentId },
+        { from: studentId, to: alumniId }
+      ]
+    })
+      .populate('from', 'name email role profilePic')
+      .populate('to', 'name email role profilePic')
+      .sort({ createdAt: 1 });
+
+    // Mark messages sent to this alumni as read
+    await Message.updateMany(
+      { from: studentId, to: alumniId, isRead: false },
+      { isRead: true }
+    );
+
+    res.json({
+      student: {
+        _id: student._id,
+        name: student.name,
+        department: student.department,
+        studentId: student.studentId,
+        year: student.year,
+        profilePic: student.profilePic
+      },
+      messages
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Send chat message to student
+router.post('/students/:studentId/chat', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { content } = req.body;
+
+    const student = await User.findById(studentId);
+    if (!student || student.role !== 'student') {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    const message = new Message({
+      from: req.user._id,
+      to: studentId,
+      content
+    });
+
+    await message.save();
+    await message.populate('from', 'name email role profilePic');
+    await message.populate('to', 'name email role profilePic');
+
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 export default router;

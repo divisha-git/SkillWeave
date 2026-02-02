@@ -6,6 +6,7 @@ import Company from '../models/Company.js';
 import User from '../models/User.js';
 import Message from '../models/Message.js';
 import Settings from '../models/Settings.js';
+import Event from '../models/Event.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -121,6 +122,37 @@ router.get('/profile', async (req, res) => {
       companies,
       relevantAlumni,
       pendingInvitations: myInvitations
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update Student Profile
+router.put('/profile', async (req, res) => {
+  try {
+    const { name, studentId, department, year, skills, cgpa, achievements, resume, profilePic } = req.body;
+
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (studentId) updateData.studentId = studentId;
+    if (department) updateData.department = department;
+    if (year) updateData.year = year;
+    if (skills !== undefined) updateData.skills = skills;
+    if (cgpa !== undefined) updateData.cgpa = cgpa;
+    if (achievements !== undefined) updateData.achievements = achievements;
+    if (resume !== undefined) updateData.resume = resume;
+    if (profilePic !== undefined) updateData.profilePic = profilePic;
+
+    const student = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: updateData },
+      { new: true }
+    ).select('-password');
+
+    res.json({
+      message: 'Profile updated successfully',
+      student
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -476,15 +508,36 @@ router.get('/companies', async (req, res) => {
 // Search Alumni
 router.get('/alumni/search', async (req, res) => {
   try {
-    const { company } = req.query;
-    const query = { role: 'alumni', isBYTSAlumni: true };
+    const { company, name, department } = req.query;
+    const query = { role: 'alumni' };
     
     if (company) {
       query.company = { $regex: company, $options: 'i' };
     }
+    
+    if (name) {
+      query.name = { $regex: name, $options: 'i' };
+    }
+    
+    if (department) {
+      query.department = { $regex: department, $options: 'i' };
+    }
 
     const alumni = await User.find(query)
-      .select('name company roleAtCompany yearOfPassing email')
+      .select('name company roleAtCompany yearOfPassing email department domain linkedin phone experience')
+      .sort({ name: 1 });
+
+    res.json(alumni);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get all alumni
+router.get('/alumni', async (req, res) => {
+  try {
+    const alumni = await User.find({ role: 'alumni' })
+      .select('name company roleAtCompany yearOfPassing email department domain linkedin phone experience')
       .sort({ name: 1 });
 
     res.json(alumni);
@@ -533,11 +586,594 @@ router.get('/messages', async (req, res) => {
         { to: req.user._id }
       ]
     })
-      .populate('from', 'name email')
-      .populate('to', 'name email')
+      .populate('from', 'name email role')
+      .populate('to', 'name email role')
       .sort({ createdAt: -1 });
 
     res.json(messages);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get conversation with specific alumni
+router.get('/alumni/:alumniId/conversation', async (req, res) => {
+  try {
+    const { alumniId } = req.params;
+    const studentId = req.user._id;
+
+    // Verify alumni exists
+    const alumni = await User.findById(alumniId);
+    if (!alumni || alumni.role !== 'alumni') {
+      return res.status(404).json({ message: 'Alumni not found' });
+    }
+
+    // Get all messages between student and alumni
+    const messages = await Message.find({
+      $or: [
+        { from: studentId, to: alumniId },
+        { from: alumniId, to: studentId }
+      ]
+    })
+      .populate('from', 'name email role profilePic')
+      .populate('to', 'name email role profilePic')
+      .sort({ createdAt: 1 });
+
+    // Mark messages sent to this student as read
+    await Message.updateMany(
+      { from: alumniId, to: studentId, isRead: false },
+      { isRead: true }
+    );
+
+    res.json({
+      alumni: {
+        _id: alumni._id,
+        name: alumni.name,
+        company: alumni.company,
+        roleAtCompany: alumni.roleAtCompany,
+        profilePic: alumni.profilePic
+      },
+      messages
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Send message in conversation
+router.post('/alumni/:alumniId/chat', async (req, res) => {
+  try {
+    const { alumniId } = req.params;
+    const { content } = req.body;
+
+    const alumni = await User.findById(alumniId);
+    if (!alumni || alumni.role !== 'alumni') {
+      return res.status(404).json({ message: 'Alumni not found' });
+    }
+
+    const message = new Message({
+      from: req.user._id,
+      to: alumniId,
+      content
+    });
+
+    await message.save();
+    await message.populate('from', 'name email role profilePic');
+    await message.populate('to', 'name email role profilePic');
+
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get unread message count per alumni
+router.get('/alumni/unread-counts', async (req, res) => {
+  try {
+    const unreadCounts = await Message.aggregate([
+      {
+        $match: {
+          to: req.user._id,
+          isRead: false
+        }
+      },
+      {
+        $group: {
+          _id: '$from',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Convert to object format { alumniId: count }
+    const countsMap = {};
+    unreadCounts.forEach(item => {
+      countsMap[item._id.toString()] = item.count;
+    });
+
+    res.json(countsMap);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== EVENT/HACKATHON ROUTES ====================
+
+// Get all upcoming events
+router.get('/events', async (req, res) => {
+  try {
+    const { status } = req.query;
+    const query = {};
+    
+    if (status) {
+      query.status = status;
+    }
+
+    const events = await Event.find(query)
+      .populate('createdBy', 'name')
+      .sort({ startDate: 1 });
+
+    // Add registration status for current user
+    const eventsWithStatus = await Promise.all(events.map(async (event) => {
+      const myTeam = await Team.findOne({
+        event: event._id,
+        $or: [
+          { leader: req.user._id },
+          { members: req.user._id }
+        ]
+      }).populate('members', 'name email studentId department');
+
+      return {
+        ...event.toObject(),
+        isRegistered: !!myTeam,
+        myTeam: myTeam
+      };
+    }));
+
+    res.json(eventsWithStatus);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get single event with details
+router.get('/events/:eventId', async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.eventId)
+      .populate('createdBy', 'name');
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Get my team for this event
+    const myTeam = await Team.findOne({
+      event: event._id,
+      $or: [
+        { leader: req.user._id },
+        { members: req.user._id }
+      ]
+    })
+      .populate('leader', 'name email studentId department')
+      .populate('members', 'name email studentId department')
+      .populate('pendingInvites.student', 'name email studentId department')
+      .populate('problemStatement', 'title description');
+
+    // Get problem statements for this event
+    const problemStatements = await ProblemStatement.find({
+      event: event._id,
+      postedByRole: 'admin',
+      status: 'open'
+    }).populate('selectedTeams', 'name');
+
+    res.json({
+      event,
+      myTeam,
+      problemStatements,
+      isRegistered: !!myTeam
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get available students for an event (not in any team for this event)
+router.get('/events/:eventId/available-students', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    // Get all students
+    const allStudents = await User.find({ role: 'student' })
+      .select('name email studentId department year');
+
+    // Get all teams for this event
+    const teamsInEvent = await Team.find({ event: eventId });
+
+    // Get all students who are in a team for this event
+    const studentsInTeams = new Set();
+    teamsInEvent.forEach(team => {
+      if (team.leader) studentsInTeams.add(team.leader.toString());
+      team.members.forEach(member => studentsInTeams.add(member.toString()));
+      team.pendingInvites.forEach(invite => {
+        if (invite.status === 'pending') {
+          studentsInTeams.add(invite.student.toString());
+        }
+      });
+    });
+
+    // Filter available students
+    const availableStudents = allStudents.filter(
+      student => !studentsInTeams.has(student._id.toString())
+    );
+
+    res.json(availableStudents);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Create team for an event
+router.post('/events/:eventId/teams', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { name } = req.body;
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Check if registration is still open
+    if (event.registrationDeadline && new Date() > new Date(event.registrationDeadline)) {
+      return res.status(400).json({ message: 'Registration deadline has passed' });
+    }
+
+    // Check if student is already in a team for this event
+    const existingTeam = await Team.findOne({
+      event: eventId,
+      $or: [
+        { leader: req.user._id },
+        { members: req.user._id }
+      ]
+    });
+
+    if (existingTeam) {
+      return res.status(400).json({ message: 'You are already in a team for this event' });
+    }
+
+    // Check if student has pending invite for this event
+    const pendingInviteTeam = await Team.findOne({
+      event: eventId,
+      'pendingInvites.student': req.user._id,
+      'pendingInvites.status': 'pending'
+    });
+
+    if (pendingInviteTeam) {
+      return res.status(400).json({ 
+        message: 'You have a pending invite for this event. Accept or reject it first.' 
+      });
+    }
+
+    const team = new Team({
+      name,
+      leader: req.user._id,
+      members: [req.user._id],
+      event: eventId,
+      maxSize: event.teamSize,
+      status: 'forming'
+    });
+
+    await team.save();
+    await team.populate('leader', 'name email studentId department');
+    await team.populate('members', 'name email studentId department');
+
+    res.status(201).json({
+      message: 'Team created successfully',
+      team
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Invite student to event team
+router.post('/events/:eventId/teams/:teamId/invite', async (req, res) => {
+  try {
+    const { eventId, teamId } = req.params;
+    const { studentId } = req.body;
+
+    const team = await Team.findOne({ _id: teamId, event: eventId });
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+
+    if (team.leader.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only team leader can invite members' });
+    }
+
+    // Check team size limit
+    const currentMembers = team.members.length;
+    const pendingInvitesCount = team.pendingInvites.filter(inv => inv.status === 'pending').length;
+    
+    if (currentMembers + pendingInvitesCount >= team.maxSize) {
+      return res.status(400).json({ 
+        message: `Cannot send invite. Team will exceed maximum size of ${team.maxSize} members.` 
+      });
+    }
+
+    // Check if student is already in a team for this event
+    const studentInTeam = await Team.findOne({
+      event: eventId,
+      $or: [
+        { leader: studentId },
+        { members: studentId }
+      ]
+    });
+
+    if (studentInTeam) {
+      return res.status(400).json({ message: 'Student is already in a team for this event' });
+    }
+
+    // Check if already has pending invite for this event
+    const hasPendingInvite = await Team.findOne({
+      event: eventId,
+      'pendingInvites.student': studentId,
+      'pendingInvites.status': 'pending'
+    });
+
+    if (hasPendingInvite) {
+      return res.status(400).json({ message: 'Student already has a pending invite for this event' });
+    }
+
+    team.pendingInvites.push({
+      student: studentId,
+      status: 'pending'
+    });
+
+    await team.save();
+    await team.populate('pendingInvites.student', 'name email studentId department');
+
+    res.json({
+      message: 'Invite sent successfully',
+      team
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Accept/Reject event team invite
+router.post('/events/:eventId/teams/:teamId/invite/:inviteId', async (req, res) => {
+  try {
+    const { eventId, teamId, inviteId } = req.params;
+    const { action } = req.body; // 'accept' or 'reject'
+
+    const team = await Team.findOne({ _id: teamId, event: eventId });
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+
+    const invite = team.pendingInvites.id(inviteId);
+    if (!invite) {
+      return res.status(404).json({ message: 'Invite not found' });
+    }
+
+    if (invite.student.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    if (action === 'accept') {
+      // Check if already in a team for this event
+      const alreadyInTeam = await Team.findOne({
+        event: eventId,
+        members: req.user._id,
+        _id: { $ne: teamId }
+      });
+
+      if (alreadyInTeam) {
+        return res.status(400).json({ message: 'You are already in another team for this event' });
+      }
+
+      // Check team size
+      if (team.members.length >= team.maxSize) {
+        return res.status(400).json({ message: `Team is full (${team.maxSize} members maximum)` });
+      }
+
+      invite.status = 'accepted';
+      if (!team.members.includes(invite.student)) {
+        team.members.push(invite.student);
+      }
+
+      // Check if team is complete
+      if (team.members.length >= team.maxSize) {
+        team.isComplete = true;
+        team.status = 'active';
+      }
+    } else {
+      invite.status = 'rejected';
+    }
+
+    await team.save();
+    await team.populate('members', 'name email studentId department');
+    await team.populate('leader', 'name email studentId department');
+
+    res.json({
+      message: `Invite ${action}ed successfully`,
+      team
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get my event invitations
+router.get('/event-invitations', async (req, res) => {
+  try {
+    const invitations = await Team.find({
+      'pendingInvites.student': req.user._id,
+      'pendingInvites.status': 'pending'
+    })
+      .populate('leader', 'name email studentId')
+      .populate('event', 'name startDate teamSize')
+      .populate('pendingInvites.student', 'name email')
+      .select('name leader event pendingInvites maxSize members');
+
+    const myInvitations = invitations.map(team => {
+      const myInvite = team.pendingInvites.find(
+        inv => inv.student._id.toString() === req.user._id.toString() && inv.status === 'pending'
+      );
+      return myInvite ? {
+        teamId: team._id,
+        teamName: team.name,
+        leader: team.leader,
+        event: team.event,
+        inviteId: myInvite._id,
+        invitedAt: myInvite.invitedAt,
+        maxSize: team.maxSize,
+        currentSize: team.members.length
+      } : null;
+    }).filter(inv => inv !== null);
+
+    res.json(myInvitations);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== PROBLEM STATEMENT SELECTION ====================
+
+// Get problem statements for an event
+router.get('/events/:eventId/problem-statements', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const problemStatements = await ProblemStatement.find({
+      event: eventId,
+      postedByRole: 'admin',
+      status: 'open'
+    })
+      .populate('selectedTeams', 'name')
+      .sort({ createdAt: -1 });
+
+    // Add availability status
+    const psWithStatus = problemStatements.map(ps => ({
+      ...ps.toObject(),
+      slotsRemaining: ps.maxTeams - ps.selectedTeams.length,
+      isFull: ps.selectedTeams.length >= ps.maxTeams
+    }));
+
+    res.json(psWithStatus);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Select problem statement for team
+router.post('/events/:eventId/problem-statements/:psId/select', async (req, res) => {
+  try {
+    const { eventId, psId } = req.params;
+
+    // Get the team for this event where user is leader
+    const team = await Team.findOne({
+      event: eventId,
+      leader: req.user._id
+    });
+
+    if (!team) {
+      return res.status(400).json({ message: 'You must be a team leader to select a problem statement' });
+    }
+
+    // Check if team already has a PS
+    if (team.problemStatement) {
+      return res.status(400).json({ message: 'Your team has already selected a problem statement' });
+    }
+
+    const ps = await ProblemStatement.findById(psId);
+    if (!ps) {
+      return res.status(404).json({ message: 'Problem Statement not found' });
+    }
+
+    // Check if PS belongs to this event
+    if (ps.event.toString() !== eventId) {
+      return res.status(400).json({ message: 'Problem Statement does not belong to this event' });
+    }
+
+    // Check if PS can accept more teams
+    if (ps.selectedTeams.length >= ps.maxTeams) {
+      return res.status(400).json({ 
+        message: `This problem statement has reached maximum team limit of ${ps.maxTeams}` 
+      });
+    }
+
+    // Add team to PS and PS to team
+    ps.selectedTeams.push(team._id);
+    team.problemStatement = ps._id;
+
+    // Close PS if it reached max teams
+    if (ps.selectedTeams.length >= ps.maxTeams) {
+      ps.status = 'closed';
+    }
+
+    await ps.save();
+    await team.save();
+
+    res.json({
+      message: 'Problem Statement selected successfully',
+      problemStatement: ps,
+      team
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== TEAM DETAILS ====================
+
+// Get my team details for all events
+router.get('/my-teams', async (req, res) => {
+  try {
+    const teams = await Team.find({
+      $or: [
+        { leader: req.user._id },
+        { members: req.user._id }
+      ]
+    })
+      .populate('leader', 'name email studentId department')
+      .populate('members', 'name email studentId department')
+      .populate('pendingInvites.student', 'name email studentId')
+      .populate('event', 'name startDate endDate status')
+      .populate('problemStatement', 'title description')
+      .sort({ createdAt: -1 });
+
+    res.json(teams);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get team details by ID
+router.get('/teams/:teamId', async (req, res) => {
+  try {
+    const team = await Team.findById(req.params.teamId)
+      .populate('leader', 'name email studentId department')
+      .populate('members', 'name email studentId department')
+      .populate('pendingInvites.student', 'name email studentId')
+      .populate('event', 'name startDate endDate status teamSize')
+      .populate('problemStatement', 'title description');
+
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found' });
+    }
+
+    // Check if user is part of this team
+    const isMember = team.members.some(m => m._id.toString() === req.user._id.toString()) ||
+                     team.leader._id.toString() === req.user._id.toString();
+
+    if (!isMember) {
+      return res.status(403).json({ message: 'You are not a member of this team' });
+    }
+
+    res.json(team);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

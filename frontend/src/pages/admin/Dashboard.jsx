@@ -48,7 +48,7 @@ const TeamSizeConfig = ({ currentSize, onUpdate }) => {
       <button
         type="submit"
         disabled={loading || teamSize === currentSize}
-        className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+        className="px-6 py-2 bg-[#1a365d] text-white rounded-lg hover:bg-[#2d3748] disabled:opacity-50"
       >
         {loading ? 'Updating...' : 'Update'}
       </button>
@@ -85,43 +85,48 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a365d]"></div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-[#1a365d] shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-primary-700">BYTS Admin</h1>
+            <div className="flex items-center gap-3">
+              <img 
+                src="/kec-2.png" 
+                alt="KEC Logo" 
+                className="h-10 w-auto object-contain"
+              />
+              <h1 className="text-xl font-bold text-white">BYTSKEC Admin</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700">{user?.name}</span>
+              <span className="text-white/80">{user?.name}</span>
               <Link
                 to="/admin/students"
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30"
               >
                 Manage Students
               </Link>
               <Link
                 to="/admin/attendance"
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30"
               >
                 Mark Attendance
               </Link>
               <Link
                 to="/admin/alumni"
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30"
               >
                 Upload Alumni
               </Link>
               <Link
                 to="/admin/team-settings"
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30"
               >
                 Team Settings
               </Link>
@@ -142,32 +147,32 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Total Students</h3>
-            <p className="text-3xl font-bold text-primary-600">{stats?.totalStudents || 0}</p>
+            <p className="text-3xl font-bold text-[#1a365d]">{stats?.totalStudents || 0}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Total Alumni</h3>
-            <p className="text-3xl font-bold text-primary-600">{stats?.totalAlumni || 0}</p>
+            <p className="text-3xl font-bold text-[#1a365d]">{stats?.totalAlumni || 0}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Active Teams</h3>
-            <p className="text-3xl font-bold text-primary-600">{stats?.totalTeams || 0}</p>
+            <p className="text-3xl font-bold text-[#1a365d]">{stats?.totalTeams || 0}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Problem Statements</h3>
-            <p className="text-3xl font-bold text-primary-600">{stats?.totalProblemStatements || 0}</p>
+            <p className="text-3xl font-bold text-[#1a365d]">{stats?.totalProblemStatements || 0}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Companies</h3>
-            <p className="text-3xl font-bold text-primary-600">{stats?.totalCompanies || 0}</p>
+            <p className="text-3xl font-bold text-[#1a365d]">{stats?.totalCompanies || 0}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Overall Attendance</h3>
-            <p className="text-3xl font-bold text-primary-600">
+            <p className="text-3xl font-bold text-[#1a365d]">
               {stats?.attendance?.overallPercentage || 0}%
             </p>
             <p className="text-sm text-gray-500 mt-1">
@@ -188,7 +193,7 @@ const Dashboard = () => {
               {stats.departmentStats.map((dept, idx) => (
                 <div key={idx} className="border rounded-lg p-4">
                   <h4 className="font-medium text-gray-900">{dept.department}</h4>
-                  <p className="text-2xl font-bold text-primary-600 mt-2">{dept.students} students</p>
+                  <p className="text-2xl font-bold text-[#1a365d] mt-2">{dept.students} students</p>
                 </div>
               ))}
             </div>

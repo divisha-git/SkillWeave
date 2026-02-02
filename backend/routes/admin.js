@@ -9,6 +9,7 @@ import ProblemStatement from '../models/ProblemStatement.js';
 import Company from '../models/Company.js';
 import Message from '../models/Message.js';
 import Settings from '../models/Settings.js';
+import Event from '../models/Event.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -431,6 +432,214 @@ router.get('/dashboard', async (req, res) => {
       },
       departmentStats
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== EVENT MANAGEMENT ====================
+
+// Create Event/Hackathon
+router.post('/events', async (req, res) => {
+  try {
+    const { name, description, startDate, endDate, teamSize, registrationDeadline, venue } = req.body;
+
+    const event = new Event({
+      name,
+      description,
+      startDate,
+      endDate,
+      teamSize: teamSize || 5,
+      registrationDeadline,
+      venue,
+      createdBy: req.user._id
+    });
+
+    await event.save();
+
+    res.status(201).json({
+      message: 'Event created successfully',
+      event
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get all events
+router.get('/events', async (req, res) => {
+  try {
+    const { status } = req.query;
+    const query = {};
+    
+    if (status) {
+      query.status = status;
+    }
+
+    const events = await Event.find(query)
+      .populate('createdBy', 'name email')
+      .sort({ startDate: -1 });
+
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get single event with teams
+router.get('/events/:id', async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id)
+      .populate('createdBy', 'name email');
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Get teams for this event
+    const teams = await Team.find({ event: event._id })
+      .populate('leader', 'name email studentId department')
+      .populate('members', 'name email studentId department')
+      .populate('problemStatement', 'title');
+
+    res.json({ event, teams });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update event
+router.put('/events/:id', async (req, res) => {
+  try {
+    const { name, description, startDate, endDate, teamSize, registrationDeadline, venue, status } = req.body;
+
+    const event = await Event.findByIdAndUpdate(
+      req.params.id,
+      { name, description, startDate, endDate, teamSize, registrationDeadline, venue, status },
+      { new: true }
+    );
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    res.json({
+      message: 'Event updated successfully',
+      event
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete event
+router.delete('/events/:id', async (req, res) => {
+  try {
+    const event = await Event.findByIdAndDelete(req.params.id);
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Also delete all teams associated with this event
+    await Team.deleteMany({ event: event._id });
+
+    res.json({ message: 'Event and associated teams deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== PROBLEM STATEMENT MANAGEMENT ====================
+
+// Create Problem Statement (Admin)
+router.post('/problem-statements', async (req, res) => {
+  try {
+    const { title, description, eventId, maxTeams } = req.body;
+
+    const ps = new ProblemStatement({
+      title,
+      description,
+      event: eventId,
+      postedBy: req.user._id,
+      postedByRole: 'admin',
+      maxTeams: maxTeams || 5,
+      isPrivate: false,
+      status: 'open'
+    });
+
+    await ps.save();
+
+    res.status(201).json({
+      message: 'Problem Statement created successfully',
+      problemStatement: ps
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get all problem statements
+router.get('/problem-statements', async (req, res) => {
+  try {
+    const { eventId, status } = req.query;
+    const query = {};
+    
+    if (eventId) query.event = eventId;
+    if (status) query.status = status;
+
+    const problemStatements = await ProblemStatement.find(query)
+      .populate('postedBy', 'name email')
+      .populate('event', 'name')
+      .populate('selectedTeams', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json(problemStatements);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update problem statement
+router.put('/problem-statements/:id', async (req, res) => {
+  try {
+    const { title, description, maxTeams, status } = req.body;
+
+    const ps = await ProblemStatement.findByIdAndUpdate(
+      req.params.id,
+      { title, description, maxTeams, status },
+      { new: true }
+    );
+
+    if (!ps) {
+      return res.status(404).json({ message: 'Problem Statement not found' });
+    }
+
+    res.json({
+      message: 'Problem Statement updated successfully',
+      problemStatement: ps
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete problem statement
+router.delete('/problem-statements/:id', async (req, res) => {
+  try {
+    const ps = await ProblemStatement.findByIdAndDelete(req.params.id);
+
+    if (!ps) {
+      return res.status(404).json({ message: 'Problem Statement not found' });
+    }
+
+    // Remove PS reference from teams
+    await Team.updateMany(
+      { problemStatement: ps._id },
+      { $unset: { problemStatement: 1 } }
+    );
+
+    res.json({ message: 'Problem Statement deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

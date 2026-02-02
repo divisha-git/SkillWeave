@@ -1,0 +1,297 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap');
+
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  transition: opacity 1s ease-out;
+}
+
+.loading-screen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+/* KEC Main Logo Text */
+.kec-logo-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1em;
+  margin-bottom: 1.5rem;
+  opacity: 0;
+  animation: fadeInUp 1.2s ease-out 0.3s forwards;
+}
+
+.kec-letter {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  font-size: 2.5rem;
+  line-height: 1;
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .kec-letter {
+    font-size: 3rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .kec-letter {
+    font-size: 3.5rem;
+  }
+}
+
+/* K letter - Blue */
+.kec-letter.letter-k {
+  color: #1a365d;
+}
+
+/* E letter - Green */
+.kec-letter.letter-e {
+  color: #91C04A;
+}
+
+/* C letter - Blue */
+.kec-letter.letter-c {
+  color: #1a365d;
+}
+
+/* College Name */
+.college-name {
+  opacity: 0;
+  animation: fadeInUp 1.2s ease-out 1.2s forwards;
+}
+
+.college-name-text {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+@media (min-width: 768px) {
+  .college-name-text {
+    font-size: 1.1rem;
+    letter-spacing: 0.2em;
+    gap: 0.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .college-name-text {
+    font-size: 1.3rem;
+  }
+}
+
+.college-name-text .word {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer effect for KONGU - Blue */
+.college-name-text .word.blue {
+  color: #1a365d;
+}
+
+.college-name-text .word.blue::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  animation: shimmerSlide 2.5s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+/* Shimmer effect for ENGINEERING - Green */
+.college-name-text .word.green {
+  color: #91C04A;
+}
+
+.college-name-text .word.green::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  animation: shimmerSlide 2.5s ease-in-out infinite;
+  animation-delay: 2.3s;
+}
+
+/* Shimmer effect for COLLEGE - Blue */
+.college-name-text .word.blue-light {
+  color: #1a365d;
+}
+
+.college-name-text .word.blue-light::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  animation: shimmerSlide 2.5s ease-in-out infinite;
+  animation-delay: 2.6s;
+}
+
+/* Tagline */
+.tagline-container {
+  margin-top: 1.2rem;
+  opacity: 0;
+  animation: fadeInUp 1.2s ease-out 2.2s forwards;
+}
+
+.tagline-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+}
+
+.tagline-decorator {
+  width: 35px;
+  height: 1.5px;
+  background: #1a365d;
+  opacity: 0;
+  animation: lineGrow 0.8s ease-out 2.8s forwards;
+}
+
+.tagline-decorator.left {
+  transform-origin: right center;
+}
+
+.tagline-decorator.right {
+  transform-origin: left center;
+}
+
+@media (min-width: 768px) {
+  .tagline-decorator {
+    width: 50px;
+  }
+}
+
+.tagline-text {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  color: #1a365d;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .tagline-text {
+    font-size: 0.8rem;
+    letter-spacing: 0.35em;
+  }
+}
+
+/* Shimmer Slide Animation */
+@keyframes shimmerSlide {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Fade In Up Animation */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Line Grow Animation */
+@keyframes lineGrow {
+  0% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* Subtle glow pulse for letters */
+.kec-letter.letter-k {
+  animation: fadeInUp 1.2s ease-out 0.3s forwards, glowPulseBlue 3s ease-in-out 1.5s infinite;
+  opacity: 0;
+}
+
+.kec-letter.letter-e {
+  animation: fadeInUp 1.2s ease-out 0.5s forwards, glowPulseGreen 3s ease-in-out 1.7s infinite;
+  opacity: 0;
+}
+
+.kec-letter.letter-c {
+  animation: fadeInUp 1.2s ease-out 0.7s forwards, glowPulseBlue 3s ease-in-out 1.9s infinite;
+  opacity: 0;
+}
+
+@keyframes glowPulseBlue {
+  0%, 100% {
+    text-shadow: none;
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(26, 54, 93, 0.3);
+  }
+}
+
+@keyframes glowPulseGreen {
+  0%, 100% {
+    text-shadow: none;
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(145, 192, 74, 0.3);
+  }
+}
