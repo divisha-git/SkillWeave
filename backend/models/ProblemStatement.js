@@ -24,6 +24,10 @@ const problemStatementSchema = new mongoose.Schema({
     enum: ['admin', 'student'],
     default: 'student'
   },
+  maxTeams: {
+    type: Number,
+    default: null
+  },
   // For student-posted PS
   team: {
     type: mongoose.Schema.Types.ObjectId,

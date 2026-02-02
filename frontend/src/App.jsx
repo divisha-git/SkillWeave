@@ -12,9 +12,10 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminStudents from './pages/admin/Students';
 import AdminAttendance from './pages/admin/Attendance';
 import AdminAlumni from './pages/admin/Alumni';
-import AdminTeamSettings from './pages/admin/TeamSettings';
 import AdminResources from './pages/admin/Resources';
 import AdminInterviewFeedback from './pages/admin/InterviewFeedback';
+import AdminEvents from './pages/admin/Events';
+import AdminEventDetails from './pages/admin/EventDetailsPage';
 
 // Student pages
 import StudentProfile from './pages/student/Profile';
@@ -22,6 +23,8 @@ import StudentAlumni from './pages/student/Alumni';
 import StudentAttendance from './pages/student/Attendance';
 import StudentResources from './pages/student/Resources';
 import StudentFeedback from './pages/student/Feedback';
+import StudentEvents from './pages/student/Events';
+import StudentEventDetails from './pages/student/EventDetailsPage';
 
 // Alumni pages
 import AlumniProfile from './pages/alumni/Profile';
@@ -116,14 +119,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/admin/team-settings"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <AdminTeamSettings />
-          </ProtectedRoute>
-        }
-      />
+
       <Route
         path="/admin/resources"
         element={
@@ -137,6 +133,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminInterviewFeedback />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/events"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminEvents />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/events/:id"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminEventDetails />
           </ProtectedRoute>
         }
       />
@@ -163,6 +175,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['student']}>
             <StudentResources />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/events"
+        element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StudentEvents />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/events/:id"
+        element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StudentEventDetails />
           </ProtectedRoute>
         }
       />

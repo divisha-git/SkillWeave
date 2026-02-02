@@ -14,6 +14,7 @@ const Profile = () => {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [profilePic, setProfilePic] = useState(null);
   const [hackathons, setHackathons] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]); // Added state
   const [unreadAlumniMessages, setUnreadAlumniMessages] = useState(0);
   const [alumniMessages, setAlumniMessages] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -56,6 +57,7 @@ const Profile = () => {
   useEffect(() => {
     fetchProfile();
     fetchHackathons();
+    fetchUpcomingEvents(); // Added call
     fetchUnreadMessages();
     fetchAlumniMessages();
   }, []);
@@ -97,6 +99,14 @@ const Profile = () => {
     } catch (error) {
       // No hackathons available
       setHackathons([]);
+    }
+  };
+  const fetchUpcomingEvents = async () => {
+    try {
+      const res = await api.get('/student/events?status=upcoming');
+      setUpcomingEvents(res.data || []);
+    } catch (error) {
+      console.error('Failed to fetch events');
     }
   };
 
@@ -145,6 +155,7 @@ const Profile = () => {
   // Navigation items for sidebar
   const navItems = [
     { name: 'Dashboard', path: '/student/profile', icon: 'home', current: true },
+    { name: 'Events', path: '/student/events', icon: 'flag' },
     { name: 'Attendance', path: '/student/attendance', icon: 'calendar' },
     { name: 'Resources', path: '/student/resources', icon: 'book' },
     { name: 'Alumni Network', path: '/student/alumni', icon: 'users', badge: unreadAlumniMessages > 0 ? unreadAlumniMessages : null },
@@ -183,8 +194,34 @@ const Profile = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         );
+      case 'flag':
+        return (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-8a2 2 0 012-2h14a2 2 0 012 2v8M3 13V4a2 2 0 012-2h4l2 3h6a2 2 0 012 2v1l-2 3h-4l-2-3H5a2 2 0 00-2 2v9" />
+            </svg>
+        );
+        );
       default:
         return null;
+    }
+  };
+
+  const handleInviteResponse = async (inviteId, teamId, eventId, action) => {
+    try {
+      if (eventId) {
+        await api.post(`/student/events/${eventId}/teams/${teamId}/invite/${inviteId}`, { action });
+      } else {
+        await api.post(`/student/teams/${teamId}/invite/${inviteId}`, { action });
+      }
+      
+      toast.success(`Invitation ${action}ed successfully`);
+      fetchProfile(); // Refresh profile to remove invite from list
+      // Also refresh teams list if accepted
+      if (action === 'accept') {
+        // You might want to refresh other data if needed
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || `Failed to ${action} invitation`);
     }
   };
 
@@ -461,33 +498,20 @@ const Profile = () => {
                   <p className="text-xs text-gray-500">Hackathons & Competitions</p>
                 </div>
               </div>
-              <div className="p-5">
-                {hackathons.length > 0 ? (
-                  <div className="space-y-3">
-                    {hackathons.slice(0, 3).map((hackathon) => (
-                      <div key={hackathon._id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-                        {hackathon.isNew && (
-                          <span className="px-2 py-0.5 bg-[#1a365d] text-white text-xs font-medium rounded-full shrink-0">NEW</span>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 text-sm truncate">{hackathon.name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {new Date(hackathon.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(hackathon.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <p className="text-gray-500 text-sm">No upcoming events</p>
-                  </div>
-                )}
+              <div className="p-8 text-center flex flex-col items-center justify-center h-[280px]">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-[#1a365d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-bold text-gray-900 mb-2">Explore Events</h4>
+                <p className="text-gray-500 mb-6 text-sm">Check out the latest hackathons and events happening on campus.</p>
+                <Link 
+                  to="/student/events" 
+                  className="px-6 py-2 bg-[#1a365d] text-white rounded-xl hover:bg-[#2d3748] transition-colors font-medium shadow-sm hover:shadow-md"
+                >
+                  View All Events
+                </Link>
               </div>
             </div>
 

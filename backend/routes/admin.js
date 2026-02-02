@@ -9,7 +9,6 @@ import Team from '../models/Team.js';
 import ProblemStatement from '../models/ProblemStatement.js';
 import Company from '../models/Company.js';
 import Message from '../models/Message.js';
-import Settings from '../models/Settings.js';
 import Event from '../models/Event.js';
 import Resource from '../models/Resource.js';
 import FeedbackTask from '../models/FeedbackTask.js';
@@ -373,47 +372,15 @@ router.get('/alumni', async (req, res) => {
   }
 });
 
-// Get Team Size Setting
-router.get('/settings/team-size', async (req, res) => {
-  try {
-    const teamSize = await Settings.getSetting('teamSize', 5);
-    res.json({ teamSize: parseInt(teamSize) });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Set Team Size Setting
-router.post('/settings/team-size', async (req, res) => {
-  try {
-    const { teamSize } = req.body;
-    
-    if (!teamSize || teamSize < 2 || teamSize > 20) {
-      return res.status(400).json({ message: 'Team size must be between 2 and 20' });
-    }
-
-    await Settings.setSetting('teamSize', parseInt(teamSize));
-    
-    // Update all existing teams' maxSize
-    await Team.updateMany({}, { maxSize: parseInt(teamSize) });
-    
-    res.json({ 
-      message: 'Team size updated successfully',
-      teamSize: parseInt(teamSize)
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
 // Admin Dashboard
 router.get('/dashboard', async (req, res) => {
   try {
     const totalStudents = await User.countDocuments({ role: 'student' });
     const totalAlumni = await User.countDocuments({ role: 'alumni', isBYTSAlumni: true });
-    const totalTeams = await Team.countDocuments({ status: 'active' });
-    const totalProblemStatements = await ProblemStatement.countDocuments();
-    const totalCompanies = await Company.countDocuments();
+    // const totalTeams = await Team.countDocuments({ status: 'active' });
+    // const totalProblemStatements = await ProblemStatement.countDocuments();
+    const totalEvents = await Event.countDocuments();
+    const totalResources = await Resource.countDocuments();
 
     // Attendance statistics
     const totalAttendanceRecords = await Attendance.countDocuments();
@@ -431,16 +398,12 @@ router.get('/dashboard', async (req, res) => {
       })
     );
 
-    // Get team size setting
-    const teamSize = await Settings.getSetting('teamSize', 5);
-
     res.json({
       totalStudents,
       totalAlumni,
-      totalTeams,
-      totalProblemStatements,
       totalCompanies,
-      teamSize: parseInt(teamSize),
+      totalEvents,
+      totalResources,
       attendance: {
         totalRecords: totalAttendanceRecords,
         presentRecords,
@@ -458,7 +421,17 @@ router.get('/dashboard', async (req, res) => {
 // Create Event/Hackathon
 router.post('/events', async (req, res) => {
   try {
-    const { name, description, startDate, endDate, teamSize, registrationDeadline, venue } = req.body;
+    const { 
+      name, 
+      description, 
+      startDate, 
+      endDate, 
+      teamSize, 
+      registrationDeadline, 
+      venue, 
+      eventType, 
+      problemStatements 
+    } = req.body;
 
     const event = new Event({
       name,
@@ -468,10 +441,23 @@ router.post('/events', async (req, res) => {
       teamSize: teamSize || 5,
       registrationDeadline,
       venue,
+      eventType: eventType || 'event',
       createdBy: req.user._id
     });
 
     await event.save();
+
+    if (eventType === 'hackathon' && problemStatements && problemStatements.length > 0) {
+      const psDocuments = problemStatements.map(ps => ({
+        title: ps.title,
+        description: ps.description,
+        maxTeams: ps.maxTeams,
+        event: event._id,
+        postedBy: req.user._id,
+        postedByRole: 'admin'
+      }));
+      await ProblemStatement.insertMany(psDocuments);
+    }
 
     res.status(201).json({
       message: 'Event created successfully',

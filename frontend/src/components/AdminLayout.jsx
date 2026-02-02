@@ -37,6 +37,7 @@ const AdminLayout = ({ children, title }) => {
     { name: 'Dashboard', path: '/admin/dashboard', icon: 'home' },
     { name: 'Students', path: '/admin/students', icon: 'users' },
     { name: 'Attendance', path: '/admin/attendance', icon: 'calendar' },
+    { name: 'Events', path: '/admin/events', icon: 'flag' },
     { name: 'Resources', path: '/admin/resources', icon: 'book' },
     { name: 'Alumni', path: '/admin/alumni', icon: 'graduation' },
     { name: 'Interview Feedback', path: '/admin/interview-feedback', icon: 'feedback' },
@@ -61,6 +62,13 @@ const AdminLayout = ({ children, title }) => {
         return (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        );
+      case 'flag':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-8a2 2 0 012-2h14a2 2 0 012 2v8M3 21h18M5 10V7a2 2 0 012-2h14a2 2 0 012 2v3M3 7l9-4 9 4M3 7v13" />
+            
           </svg>
         );
       case 'book':

@@ -8,7 +8,6 @@ import ProblemStatement from '../models/ProblemStatement.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
 import Message from '../models/Message.js';
-import Settings from '../models/Settings.js';
 import Event from '../models/Event.js';
 import Resource from '../models/Resource.js';
 import FeedbackTask from '../models/FeedbackTask.js';
@@ -98,10 +97,11 @@ router.get('/profile', async (req, res) => {
     const invitations = await Team.find({
       'pendingInvites.student': req.user._id,
       'pendingInvites.status': 'pending',
-      status: 'active'
+      status: { $in: ['active', 'forming'] }
     })
       .populate('leader', 'name email')
-      .select('name leader pendingInvites maxSize members');
+      .populate('event', 'name')
+      .select('name leader pendingInvites maxSize members event');
 
     const myInvitations = invitations.map(team => {
       const myInvite = team.pendingInvites.find(
@@ -114,7 +114,8 @@ router.get('/profile', async (req, res) => {
         inviteId: myInvite._id,
         invitedAt: myInvite.invitedAt,
         maxSize: team.maxSize || 5,
-        currentSize: (team.members ? team.members.length : 0) + 1 // +1 for leader
+        currentSize: (team.members ? team.members.length : 0) + 1, // +1 for leader
+        event: team.event
       } : null;
     }).filter(inv => inv !== null);
 
@@ -325,7 +326,8 @@ router.post('/teams/:teamId/invite/:inviteId', async (req, res) => {
         team.members.push(invite.student);
       }
     } else {
-      invite.status = 'rejected';
+      // Remove rejected invite
+      team.pendingInvites.pull(inviteId);
     }
 
     await team.save();
@@ -716,6 +718,9 @@ router.get('/events', async (req, res) => {
     
     if (status) {
       query.status = status;
+    } else {
+      // Default to showing upcoming and ongoing events if no status specified
+      query.status = { $in: ['upcoming', 'ongoing'] };
     }
 
     const events = await Event.find(query)
@@ -999,7 +1004,9 @@ router.post('/events/:eventId/teams/:teamId/invite/:inviteId', async (req, res) 
         team.status = 'active';
       }
     } else {
-      invite.status = 'rejected';
+      // If rejected, remove the invite entirely so it doesn't clutter the list
+      // and allows re-inviting if needed later
+      team.pendingInvites.pull(inviteId);
     }
 
     await team.save();
@@ -1191,7 +1198,10 @@ router.get('/teams/:teamId', async (req, res) => {
 // Get student's hackathons/events
 router.get('/hackathons', async (req, res) => {
   try {
-    const events = await Event.find({ status: 'active' }).sort({ startDate: -1 });
+    const events = await Event.find({ 
+      status: { $in: ['upcoming', 'ongoing'] },
+      eventType: 'hackathon'
+    }).sort({ startDate: 1 });
     res.json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
