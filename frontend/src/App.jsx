@@ -14,6 +14,7 @@ import AdminAttendance from './pages/admin/Attendance';
 import AdminAlumni from './pages/admin/Alumni';
 import AdminResources from './pages/admin/Resources';
 import AdminInterviewFeedback from './pages/admin/InterviewFeedback';
+import AdminTeamSettings from './pages/admin/TeamSettings';
 import AdminEvents from './pages/admin/Events';
 import AdminEventDetails from './pages/admin/EventDetailsPage';
 
@@ -149,6 +150,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminEventDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/team-settings"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminTeamSettings />
           </ProtectedRoute>
         }
       />
