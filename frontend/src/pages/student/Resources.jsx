@@ -190,6 +190,7 @@ const Resources = () => {
   // Navigation items for sidebar
   const navItems = [
     { name: 'Dashboard', path: '/student/profile', icon: 'home' },
+    { name: 'Events', path: '/student/events', icon: 'flag' },
     { name: 'Attendance', path: '/student/attendance', icon: 'calendar' },
     { name: 'Resources', path: '/student/resources', icon: 'book', current: true },
     { name: 'Alumni Network', path: '/student/alumni', icon: 'users' },
@@ -220,6 +221,12 @@ const Resources = () => {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
+        );
+      case 'flag':
+        return (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-8a2 2 0 012-2h14a2 2 0 012 2v8M3 13V4a2 2 0 012-2h4l2 3h6a2 2 0 012 2v1l-2 3h-4l-2-3H5a2 2 0 00-2 2v9" />
+            </svg>
         );
       default:
         return null;
@@ -549,7 +556,6 @@ const Resources = () => {
                                 Open
                               </a>
                             )
-                          )}
                           )}
                         </div>
                       </div>

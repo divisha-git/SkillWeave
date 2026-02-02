@@ -14,6 +14,7 @@ const Profile = () => {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [profilePic, setProfilePic] = useState(null);
   const [hackathons, setHackathons] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]); // Added state
   const [unreadAlumniMessages, setUnreadAlumniMessages] = useState(0);
   const [alumniMessages, setAlumniMessages] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -56,6 +57,7 @@ const Profile = () => {
   useEffect(() => {
     fetchProfile();
     fetchHackathons();
+    fetchUpcomingEvents(); // Added call
     fetchUnreadMessages();
     fetchAlumniMessages();
   }, []);
@@ -97,6 +99,14 @@ const Profile = () => {
     } catch (error) {
       // No hackathons available
       setHackathons([]);
+    }
+  };
+  const fetchUpcomingEvents = async () => {
+    try {
+      const res = await api.get('/student/events?status=upcoming');
+      setUpcomingEvents(res.data || []);
+    } catch (error) {
+      console.error('Failed to fetch events');
     }
   };
 
@@ -145,6 +155,7 @@ const Profile = () => {
   // Navigation items for sidebar
   const navItems = [
     { name: 'Dashboard', path: '/student/profile', icon: 'home', current: true },
+    { name: 'Events', path: '/student/events', icon: 'flag' },
     { name: 'Attendance', path: '/student/attendance', icon: 'calendar' },
     { name: 'Resources', path: '/student/resources', icon: 'book' },
     { name: 'Alumni Network', path: '/student/alumni', icon: 'users', badge: unreadAlumniMessages > 0 ? unreadAlumniMessages : null },
@@ -176,8 +187,33 @@ const Profile = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
         );
+      case 'flag':
+        return (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-8a2 2 0 012-2h14a2 2 0 012 2v8M3 13V4a2 2 0 012-2h4l2 3h6a2 2 0 012 2v1l-2 3h-4l-2-3H5a2 2 0 00-2 2v9" />
+            </svg>
+        );
       default:
         return null;
+    }
+  };
+
+  const handleInviteResponse = async (inviteId, teamId, eventId, action) => {
+    try {
+      if (eventId) {
+        await api.post(`/student/events/${eventId}/teams/${teamId}/invite/${inviteId}`, { action });
+      } else {
+        await api.post(`/student/teams/${teamId}/invite/${inviteId}`, { action });
+      }
+      
+      toast.success(`Invitation ${action}ed successfully`);
+      fetchProfile(); // Refresh profile to remove invite from list
+      // Also refresh teams list if accepted
+      if (action === 'accept') {
+        // You might want to refresh other data if needed
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || `Failed to ${action} invitation`);
     }
   };
 
@@ -389,6 +425,70 @@ const Profile = () => {
               <p className="text-white/80">Welcome to your student dashboard</p>
             </div>
           </div>
+
+          {upcomingEvents.length > 0 && (
+            <div className="mb-8 animate-fadeIn">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">🔔</span>
+                <h2 className="text-xl font-bold text-[#1a365d]">New Events & Hackathons</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {upcomingEvents.map((event) => (
+                  <div key={event._id} className="group bg-white rounded-xl shadow-sm border border-blue-100 p-5 relative overflow-hidden hovering-scale transition-all duration-300 hover:shadow-lg hover:border-blue-200">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-blue-50 to-transparent rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                    
+                    <div className="relative">
+                      <div className="flex justify-between items-start mb-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          event.eventType === 'hackathon' 
+                            ? 'bg-purple-100 text-purple-700' 
+                            : 'bg-green-100 text-green-700'
+                        }`}>
+                          {event.eventType === 'hackathon' ? 'Hackathon' : 'Event'}
+                        </span>
+                        {event.status === 'upcoming' && (
+                          <span className="bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded font-medium">
+                            Upcoming
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1 group-hover:text-[#1a365d] transition-colors">
+                        {event.name}
+                      </h3>
+                      
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[40px]">
+                        {event.description}
+                      </p>
+                      
+                      <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+                         <div className="flex items-center gap-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {new Date(event.startDate).toLocaleDateString()}
+                         </div>
+                         <div className="flex items-center gap-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span className="truncate max-w-[100px]">{event.venue || 'TBD'}</span>
+                         </div>
+                      </div>
+
+                      <button 
+                         onClick={() => navigate(`/student/events/${event._id}`)}
+                         className="w-full py-2 bg-gray-50 text-[#1a365d] font-semibold rounded-lg group-hover:bg-[#1a365d] group-hover:text-white transition-all duration-200 text-sm"
+                      >
+                         View Details
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Main Grid - 3 columns */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

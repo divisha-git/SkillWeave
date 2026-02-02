@@ -37,6 +37,11 @@ const eventSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  eventType: {
+    type: String,
+    enum: ['event', 'hackathon'],
+    default: 'event'
+  },
   isNew: {
     type: Boolean,
     default: true
